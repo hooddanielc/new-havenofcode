@@ -1,0 +1,3 @@
+server/http/logs/nginx-error.log
+server/http/out/debug
+server/http/out/release

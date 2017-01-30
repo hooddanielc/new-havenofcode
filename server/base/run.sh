@@ -1,0 +1,1 @@
+docker run -ti --entrypoint /bin/zsh dhoodlum/base-environment
