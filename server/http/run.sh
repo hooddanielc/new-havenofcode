@@ -6,4 +6,5 @@ docker run -ti \
   -v $DIR/out:/root/out \
   -v $DIR/config:/root/config \
   -v $DIR/logs:/root/logs \
+  -p 1337:1337 \
   dhoodlum/havenofcode-http

@@ -22,4 +22,5 @@ RUN echo 'cd $HOME' >> $HOME/.zshrc
 # alias
 RUN echo 'start-http() { nginx -c $HOME/config/nginx.conf }' >> $HOME/.zshrc
 RUN echo 'stop-http() { nginx -s stop }' >> $HOME/.zshrc
+RUN echo 'rebuild() { stop-http; cd /root/src; ib main.so; start-http; }' >> $HOME/.zshrc
 RUN echo 'export PATH=$PATH:/usr/local/nginx/sbin:$HOME/ib' >> $HOME/.zshrc
