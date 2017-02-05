@@ -47,7 +47,8 @@ FIXTURE(events_call_back) {
     exit_val += 1;
   });
 
-  app.emit_request(req_t());
+  req_t::header_list_t headers;
+  app.emit_request(req_t(headers));
   app.emit_start();
   app.emit_exit();
 

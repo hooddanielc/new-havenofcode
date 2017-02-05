@@ -73,8 +73,47 @@ static void ngx_http_sample_put_handler(ngx_http_request_t *r) {
 }
 
 static ngx_int_t ngx_hoc_interface_on_http_request(ngx_http_request_t *r) {
-  current_req = new req_t();
+  ngx_list_part_t *part;
+  ngx_table_elt_t *h;
+  ngx_uint_t i;
+
+  part = &r->headers_in.headers.part;
+  h = (ngx_table_elt_t*) part->elts;
+  req_t::header_list_t headers;
+
+  // Headers list array may consist of more than one part,
+  // so loop through all of it
+
+  for (i = 0; /* void */ ; i++) {
+    if (i >= part->nelts) {
+      if (part->next == NULL) {
+          /* The last part, search is done. */
+          break;
+      }
+
+      part = part->next;
+      h = (ngx_table_elt_t*) part->elts;
+      i = 0;
+    }
+
+    //app_t::get().log(string("header length") + (int) h[i].key.len);
+    string header_key{
+      reinterpret_cast<char*>(h[i].key.data),
+      static_cast<long unsigned int>(h[i].key.len)
+    };
+
+    string header_value{
+      reinterpret_cast<char*>(h[i].value.data),
+      static_cast<long unsigned int>(h[i].value.len)
+    };
+
+    headers[header_key] = header_value;
+  }
+
+  current_req = new req_t(headers);
   app_t::get().emit_request(*current_req);
+
+
   ngx_buf_t *b;
   ngx_chain_t out;
 
