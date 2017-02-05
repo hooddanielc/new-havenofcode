@@ -1,0 +1,24 @@
+#pragma once
+
+#include <vector>
+#include <string>
+#include <functional>
+
+namespace hoc {
+
+class req_t final {
+public:
+
+  using cb_data_t = std::function<void(const std::string &data)>;
+  using cb_data_list_t = std::vector<cb_data_t>;
+
+  void on_data(const cb_data_t &fn) const;
+  void emit_data(const std::string &data);
+
+private:
+
+  mutable cb_data_list_t data_events;
+
+};  // req_t
+
+}  // hoc
