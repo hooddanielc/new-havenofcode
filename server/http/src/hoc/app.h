@@ -38,6 +38,7 @@ class app_t final {
     cb_request_list_t get_request_events();
     cb_void_list_t get_start_events();
     cb_void_list_t get_exit_events();
+    int status;
 
     app_t &clear();
 
@@ -49,7 +50,7 @@ class app_t final {
     template<typename T>
     void emit_void(const T &list);
 
-    app_t() = default;
+    app_t(): status(200) {};
     app_t(app_t &&) = delete;
     app_t(const app_t &) = delete;
     ~app_t() = default;
