@@ -14,23 +14,24 @@ void hoc::app_t::main() {
   });
 
   app.on_request([&app](const req_t &req) {
-    for (auto it = req.request_headers.begin(); it != req.request_headers.end(); ++it) {
-      //app.log(it->first + ": " + it->second);
-    }
 
-    for (auto it = req.response_headers.begin(); it != req.response_headers.end(); ++it) {
-      //app.log(it->first + ": " + it->second);
-    }
+    req.on_data([&app](const string &) {
+      // get the request data located in body
+      // of http request
+    });
 
-    // set some known headers
-    req.response_headers["Content-Length"] = "20";
-    req.response_headers["Content-Type"] = "text/html";
-    req.response_headers["This-Is-Custom"] = "LOL HOW YOU DOIN";
+    req.on_end([&req, &app]() {
+      for (auto it = req.request_headers.begin(); it != req.request_headers.end(); ++it) {
+        // print headers
+        app.log(it->first + ": " + it->second);
+      }
 
-    req.on_data([&app](const string &) {});
-
-    req.on_end([&req]() {
-      req.send_body("hello cruelish world");
+      // set some known headers
+      string hello("<html>hello <a href=\"/there\">there</a>, how are you<html/>");
+      req.set_status(200);
+      req.send_body(hello);
+      req.send_header("Content-Type", "text/html");
+      req.set_content_length(hello.length());
     });
   });
 }
