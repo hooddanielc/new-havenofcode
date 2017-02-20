@@ -1,0 +1,23 @@
+{
+  "development": {
+    "username": "admin_dev",
+    "password": "123123",
+    "database": "hoc_dev",
+    "host": "127.0.0.1",
+    "dialect": "postgres"
+  },
+  "test": {
+    "username": "admin_test",
+    "password": "123123",
+    "database": "hoc_test",
+    "host": "127.0.0.1",
+    "dialect": "postgres"
+  },
+  "production": {
+    "username": "admin_prod",
+    "password": "123123",
+    "database": "hoc_prod",
+    "host": "127.0.0.1",
+    "dialect": "postgres"
+  }
+}

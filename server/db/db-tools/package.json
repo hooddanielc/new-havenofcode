@@ -1,0 +1,21 @@
+{
+  "name": "db-tools",
+  "version": "0.0.0",
+  "description": "Some tools for the db",
+  "main": "dist/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Daniel Hood",
+  "license": "ISC",
+  "devDependencies": {
+    "babel-preset-env": "^1.1.8",
+    "gulp-babel": "^6.1.2",
+    "gulp-concat": "^2.6.1",
+    "gulp-sourcemaps": "^2.4.1"
+  },
+  "dependencies": {
+    "sequelize": "^3.30.2",
+    "sequelize-cli": "^2.5.1"
+  }
+}
