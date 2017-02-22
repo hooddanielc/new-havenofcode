@@ -23,4 +23,20 @@ RUN echo 'cd $HOME' >> $HOME/.zshrc
 RUN echo 'start-http() { nginx -c $HOME/config/nginx.conf }' >> $HOME/.zshrc
 RUN echo 'stop-http() { nginx -s stop }' >> $HOME/.zshrc
 RUN echo 'rebuild() { stop-http; cd /root/src; ib main.so; start-http; }' >> $HOME/.zshrc
-RUN echo 'export PATH=$PATH:/usr/local/nginx/sbin:$HOME/ib' >> $HOME/.zshrc
+ENV PATH $PATH:/usr/local/nginx/sbin:/root/ib
+
+# add nginx config
+ADD ./config /root/config
+
+# build nginx module
+ADD ./src /root/src
+RUN cd $HOME/src && ib main.so
+
+# create place for nginx logs to live
+RUN mkdir $HOME/logs
+
+# expose ports
+EXPOSE 1337
+
+# run nginx
+CMD nginx -c $HOME/config/nginx.conf
