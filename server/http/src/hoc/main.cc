@@ -29,9 +29,9 @@ void hoc::app_t::main() {
       // set some known headers
       string hello("<html>hello <a href=\"/there\">there</a>, how are you<html/>");
       req.set_status(200);
-      req.send_body(hello);
       req.send_header("Content-Type", "text/html");
-      req.set_content_length(hello.length());
+      req.set_content_length(hello.size());
+      req.send_body(hello);
     });
   });
 }

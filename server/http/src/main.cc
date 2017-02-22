@@ -79,8 +79,8 @@ set_custom_header_in_headers_out(ngx_http_request_t *, ngx_str_t *key, ngx_str_t
 
 void req_t::send_body(const string &body) const {
   const std::string::size_type size = body.size();
-  u_char *data = new u_char[size + 1];   //we need extra char for NUL
-  memcpy(data, body.c_str(), size + 1);
+  u_char *data = new u_char[size];
+  memcpy(data, body.c_str(), size);
 
   ngx_buf_t *b;
   b = (ngx_buf_t*) ngx_pcalloc(current_request->pool, sizeof(ngx_buf_t));
@@ -96,8 +96,8 @@ void req_t::send_header(const string &key, const string &val) const {
   if (key == "Content-Type") {
     // the content type is straight forward
     const std::string::size_type size = val.size();
-    u_char *buf = new u_char[size + 1];   //we need extra char for NUL
-    memcpy(buf, val.c_str(), size + 1);
+    u_char *buf = new u_char[size];
+    memcpy(buf, val.c_str(), size);
 
     current_request->headers_out.content_type.len = val.size();
     current_request->headers_out.content_type.data = buf;
@@ -105,12 +105,12 @@ void req_t::send_header(const string &key, const string &val) const {
     // custom header must be inserted in headers_out
 
     const std::string::size_type key_size = key.size();
-    u_char *buf_key = new u_char[key_size + 1];
-    memcpy(buf_key, key.c_str(), key_size + 1);
+    u_char *buf_key = new u_char[key_size];
+    memcpy(buf_key, key.c_str(), key_size);
 
     const std::string::size_type val_size = val.size();
-    u_char *buf_val = new u_char[val_size + 1];
-    memcpy(buf_val, val.c_str(), val_size + 1);
+    u_char *buf_val = new u_char[val_size];
+    memcpy(buf_val, val.c_str(), val_size);
 
     ngx_str_t *header_key;
     ngx_str_t *header_val;
@@ -191,6 +191,8 @@ static ngx_int_t ngx_hoc_interface_on_http_request(ngx_http_request_t *r) {
   // send the body and return the status code of the output filter chain
   ngx_int_t ret = ngx_http_output_filter(current_request, out);
   delete current_req;
+  ngx_pfree(current_request->pool, out);
+  ngx_free(out);
   return ret;
 }
 
