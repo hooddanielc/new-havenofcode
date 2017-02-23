@@ -189,11 +189,10 @@ static ngx_int_t ngx_hoc_interface_on_http_request(ngx_http_request_t *r) {
   ngx_http_send_header(current_request);
 
   // send the body and return the status code of the output filter chain
-  ngx_int_t ret = ngx_http_output_filter(current_request, out);
+  ngx_http_finalize_request(r, ngx_http_output_filter(r, out));
   delete current_req;
-  ngx_pfree(current_request->pool, out);
-  ngx_free(out);
-  return ret;
+  ngx_pfree(r->pool, out);
+  return NGX_OK;
 }
 
 extern "C"
