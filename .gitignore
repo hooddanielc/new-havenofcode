@@ -3,4 +3,6 @@ server/http/logs/stdout.log
 server/http/logs/stderr.log
 server/http/out/debug
 server/http/out/release
+server/db/db-tools/node_modules
+server/db/db-tools/dist
 *.DS_Store
