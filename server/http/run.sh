@@ -10,4 +10,4 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 #   -p 1337:1337 \
 #   dhoodlum/havenofcode-http
 
-docker run -ti -p 1337:1337 dhoodlum/havenofcode-http
+docker run --rm -ti -p 1337:1337 dhoodlum/havenofcode-http
