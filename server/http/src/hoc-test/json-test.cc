@@ -1,4 +1,4 @@
-#include <hoc/lick.h>
+#include <lick/lick.h>
 #include <hoc/json.h>
 #include <iostream>
 

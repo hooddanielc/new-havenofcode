@@ -1,4 +1,4 @@
-#include <hoc/lick.h>
+#include <lick/lick.h>
 #include <hoc/app.h>
 
 using namespace hoc;
@@ -48,7 +48,7 @@ FIXTURE(events_call_back) {
   });
 
   req_t::header_list_t headers;
-  app.emit_request(req_t(headers, headers));
+  app.emit_request(req_t(headers));
   app.emit_start();
   app.emit_exit();
 

@@ -1,0 +1,6 @@
+TMP=$(pwd)
+stop-http
+cd /root/src
+ib main.so
+start-http
+cd $TMP

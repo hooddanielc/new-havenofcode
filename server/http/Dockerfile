@@ -22,14 +22,18 @@ RUN apt install -y libpq-dev
 # setup
 RUN echo 'cd $HOME' >> $HOME/.zshrc
 
-# alias
-RUN echo 'start-http() { nginx -c $HOME/config/nginx.conf }' >> $HOME/.zshrc
-RUN echo 'stop-http() { nginx -s stop }' >> $HOME/.zshrc
-RUN echo 'rebuild() { stop-http; cd /root/src; ib main.so; start-http; }' >> $HOME/.zshrc
-ENV PATH $PATH:/usr/local/nginx/sbin:/root/ib
+# set path
+ENV PATH $PATH:/usr/local/nginx/sbin:/root/ib:/root/scripts
+ENV HOC_DB_NAME hoc_dev
+ENV HOC_DB_USER admin_dev
+ENV HOC_DB_PASSWORD 123123
+ENV HOC_DB_HOST hoc-db
 
 # add nginx config
 ADD ./config /root/config
+
+# add dev scripts
+ADD ./scripts /root/scripts
 
 # build nginx module
 ADD ./src /root/src

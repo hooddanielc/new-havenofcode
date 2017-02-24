@@ -1,0 +1,19 @@
+TMP=$(pwd)
+cd /root/src
+set -e
+
+for file in /root/src/**/*-test.cc
+do
+  filename="${file%.*}"
+  rel=$(realpath --relative-to="/root/src" "$filename")
+  ib $rel
+done
+
+for file in /root/src/**/*-test.cc
+do
+  filename="${file%.*}"
+  rel=$(realpath --relative-to="/root/src" "$filename")
+  ../out/debug/$rel
+done
+
+cd $TMP
