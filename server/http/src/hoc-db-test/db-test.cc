@@ -61,6 +61,8 @@ FIXTURE(db_does_query_params) {
 
   EXPECT_EQ(res.fields(), 1);
   EXPECT_EQ(res.rows(), 1);
+  EXPECT_EQ(int(res.field_names().size()), 1);
+  EXPECT_EQ(string(res.field_names()[0]), "email");
   EXPECT_EQ(string(res[0][0]), "email@email.com");
 }
 

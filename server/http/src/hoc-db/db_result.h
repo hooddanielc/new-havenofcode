@@ -1,3 +1,4 @@
+#include <vector>
 #include <libpq-fe.h>
 #include <hoc-db/db_row.h>
 
@@ -12,6 +13,7 @@ namespace hoc {
       }
 
       int fields();
+      std::vector<const char *> field_names();
       int rows();
       ~db_result_t();
     private:
