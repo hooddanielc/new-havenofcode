@@ -13,7 +13,6 @@ FIXTURE(clear_event_state) {
   auto &app = app_t::get().clear();
 
   app.on_request([](const req_t &) {});
-
   app.on_start([]() {});
   app.on_exit([]() {});
 

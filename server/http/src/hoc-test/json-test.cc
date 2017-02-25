@@ -1,6 +1,5 @@
 #include <lick/lick.h>
 #include <hoc/json.h>
-#include <iostream>
 
 using namespace std;
 using namespace dj;

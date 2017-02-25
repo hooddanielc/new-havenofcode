@@ -5,6 +5,7 @@ set -e
 for file in /root/src/**/*-test.cc
 do
   filename="${file%.*}"
+  echo "building ${filename}"
   rel=$(realpath --relative-to="/root/src" "$filename")
   ib $rel
 done
