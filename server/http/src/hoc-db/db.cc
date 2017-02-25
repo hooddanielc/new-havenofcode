@@ -3,8 +3,6 @@
 using namespace hoc;
 using namespace std;
 
-#include <iostream>
-
 namespace hoc {
   db_result_t::~db_result_t() {
     PQclear(res);
@@ -39,7 +37,8 @@ namespace hoc {
     );
 
     if (PQresultStatus(res) == PGRES_FATAL_ERROR) {
-      throw runtime_error(string("postgres error `") + PQerrorMessage(conn) + "`");
+      string msg(PQerrorMessage(conn));
+      throw runtime_error(msg);
     } else {
       return db_result_t(res);
     }
@@ -49,15 +48,7 @@ namespace hoc {
     PGresult *res = PQexec(conn, query);
 
     if (PQresultStatus(res) == PGRES_FATAL_ERROR) {
-      string msg;
-
-      msg
-        .append("postgres command failed `")
-        .append(query)
-        .append("` with `")
-        .append(PQerrorMessage(conn))
-        .append("`");
-
+      string msg(PQerrorMessage(conn));
       throw runtime_error(msg);
     } else {
       return db_result_t(res);

@@ -3,6 +3,10 @@
 #include <string>
 #include <vector>
 #include <stdexcept>
+#include <algorithm> 
+#include <functional> 
+#include <cctype>
+#include <locale>
 #include <libpq-fe.h>
 
 namespace hoc {

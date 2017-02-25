@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <string>
 #include <libpq-fe.h>
+#include <vector>
 #include <lick/lick.h>
 #include <hoc-db/db.h>
 
@@ -42,6 +43,44 @@ FIXTURE(db_does_query) {
   EXPECT_GT(res.fields(), 0);
   EXPECT_GT(res.rows(), 0);
   db.exec("END");
+}
+
+FIXTURE(db_does_query_params) {
+  db_t db;
+  vector<const char *> params;
+  params.push_back("email@email.com");
+
+  db.exec("BEGIN");
+  db.exec("INSERT INTO \"user\" (email) VALUES ($1)", params);
+  db.exec("END");
+
+  db.exec("BEGIN");
+  db_result_t res = db.exec("SELECT email FROM \"user\" WHERE email = $1", params);
+  db.exec("DELETE FROM \"user\" WHERE email = $1", params);
+  db.exec("END");
+
+  EXPECT_EQ(res.fields(), 1);
+  EXPECT_EQ(res.rows(), 1);
+  EXPECT_EQ(string(res[0][0]), "email@email.com");
+}
+
+FIXTURE(db_nice_error_msg) {
+  db_t db;
+  vector<const char *> params;
+  params.push_back("email@email.com");
+
+  try {
+    db.exec("LOL should not work");
+  } catch (runtime_error e) {
+    EXPECT_EQ(
+      e.what(),
+      string(
+        "ERROR:  syntax error at or near \"LOL\"\n"
+        "LINE 1: LOL should not work\n"
+        "        ^\n"
+      )
+    );
+  }
 }
 
 int main(int argc, char *argv[]) {
