@@ -1,6 +1,9 @@
+#pragma once
+
 #include <vector>
 #include <libpq-fe.h>
 #include <hoc-db/db_row.h>
+#include <hoc/json.h>
 
 namespace hoc {
   class db_t;
