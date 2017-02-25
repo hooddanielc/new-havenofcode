@@ -4,6 +4,14 @@ FROM dhoodlum/base-environment
 RUN git clone https://github.com/JasonL9000/ib.git ~/ib
 RUN apt install -y python
 
+#install postgres
+RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main" >> /etc/apt/sources.list
+RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | \
+  apt-key add -
+RUN apt update
+RUN apt install -y postgresql-9.6
+RUN apt install -y libpq-dev
+
 # install nginx
 RUN apt install -y build-essential
 RUN apt install -y libpcre3 libpcre3-dev
@@ -15,9 +23,6 @@ ADD ./ngx-loadable-cpp-module /root/ngx-loadable-cpp-module
 RUN cd ~/nginx-1.10.2 && ./configure --with-http_ssl_module --add-module=/root/ngx-loadable-cpp-module
 RUN cd ~/nginx-1.10.2 && make -j$(grep -c ^processor /proc/cpuinfo) && make install
 RUN rm ~/nginx-1.10.2.tar.gz
-
-# install libpq++
-RUN apt install -y libpq-dev
 
 # setup
 RUN echo 'cd $HOME' >> $HOME/.zshrc

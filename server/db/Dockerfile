@@ -5,7 +5,7 @@ RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main" >> /etc
 RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | \
   apt-key add -
 RUN apt update
-RUN apt install -y postgresql-9.4
+RUN apt install -y postgresql-9.6
 
 # install nodejs
 RUN apt install -y xz-utils
@@ -14,8 +14,8 @@ RUN cd /opt && tar -xvf ./node-v6.9.5-linux-x64.tar.xz
 
 # set up postgres
 USER postgres
-RUN mkdir /var/run/postgresql/9.4-main.pg_stat_tmp
-ENV PATH $PATH:/usr/lib/postgresql/9.4/bin:/opt/node-v6.9.5-linux-x64/bin
+RUN mkdir /var/run/postgresql/9.6-main.pg_stat_tmp
+ENV PATH $PATH:/usr/lib/postgresql/9.6/bin:/opt/node-v6.9.5-linux-x64/bin
 RUN mkdir $HOME/data
 RUN pg_ctl init -D $HOME/data
 

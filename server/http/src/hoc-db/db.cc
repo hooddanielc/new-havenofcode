@@ -12,7 +12,7 @@ namespace hoc {
     PQfinish(conn);
   }
 
-  db_result_t db_t::exec(const char *query, const db_t::params_t &params) {
+  db_result_t db_t::exec(const char *query, const db_t::text_params_t &params) {
     PGresult *res = PQexecParams(
       conn,
       query,
@@ -34,6 +34,37 @@ namespace hoc {
 
   db_result_t db_t::exec(const char *query) {
     PGresult *res = PQexec(conn, query);
+
+    if (PQresultStatus(res) == PGRES_FATAL_ERROR) {
+      string msg(PQerrorMessage(conn));
+      throw runtime_error(msg);
+    } else {
+      return db_result_t(res);
+    }
+  }
+
+  db_result_t db_t::exec(const char *query, const db_t::mixed_params_t &params) {
+    const int size = params.size();
+    int formats[size];
+    int lengths[size];
+    const char *values[size];
+
+    for (int i = 0; i < size; ++i) {
+      formats[i] = static_cast<int>(params[i].format());
+      values[i] = params[i].val();
+      lengths[i] = static_cast<int>(params[i].size());
+    }
+
+    PGresult *res = PQexecParams(
+      conn,
+      query,
+      size,
+      NULL,
+      values,
+      lengths,
+      formats,
+      1
+    );
 
     if (PQresultStatus(res) == PGRES_FATAL_ERROR) {
       string msg(PQerrorMessage(conn));

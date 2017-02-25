@@ -1,0 +1,6 @@
+psql \
+  -h $HOC_DB_HOST \
+  -p $HOC_DB_PORT_5432_TCP_PORT \
+  -U $HOC_DB_USER \
+  -W $HOC_DB_PASSWORD \
+  -d $HOC_DB_NAME

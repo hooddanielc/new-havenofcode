@@ -1,11 +1,18 @@
+#pragma once
+
+#include <iostream>
+#include <stdlib.h>
+#include <libpq-fe.h>
+#include <hoc-db/db_col.h>
+
 namespace hoc {
   class db_result_t;
 
   class db_row_t final {
     friend db_result_t;
     public:
-      const char * operator[](int col) const {
-        return PQgetvalue(res, row, col);
+      db_col_t operator[](int col) const {
+        return db_col_t(res, row, col);
       }
 
     private:

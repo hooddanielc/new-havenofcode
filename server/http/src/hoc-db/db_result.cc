@@ -7,7 +7,7 @@ namespace hoc {
     PQclear(res);
   }
 
-  int db_result_t::fields() {
+  int db_result_t::cols() {
     return PQnfields(res);
   }
 
@@ -18,7 +18,7 @@ namespace hoc {
   vector<const char *> db_result_t::field_names() {
     vector<const char *> names;
 
-    for (int i = 0; i < fields(); ++i) {
+    for (int i = 0; i < cols(); ++i) {
       names.push_back(PQfname(res, i));
     }
 

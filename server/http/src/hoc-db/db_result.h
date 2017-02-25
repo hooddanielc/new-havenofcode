@@ -4,6 +4,7 @@
 #include <libpq-fe.h>
 #include <hoc-db/db_row.h>
 #include <hoc/json.h>
+#include <cstring>
 
 namespace hoc {
   class db_t;
@@ -15,7 +16,7 @@ namespace hoc {
         return db_row_t(res, row);
       }
 
-      int fields();
+      int cols();
       std::vector<const char *> field_names();
       int rows();
       ~db_result_t();
