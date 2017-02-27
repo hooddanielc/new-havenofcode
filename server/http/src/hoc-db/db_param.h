@@ -44,6 +44,7 @@ namespace hoc {
     friend class db_param_cb_t;
     public:
       db_param_t(int num) : cache(nullptr), type(db_param_int), num_val(num) {}
+      db_param_t(const char *str) : cache(nullptr), type(db_param_str), str_val(str) {}
       db_param_t(const std::string &str) : cache(nullptr), type(db_param_str), str_val(str) {}
 
       ~db_param_t() {

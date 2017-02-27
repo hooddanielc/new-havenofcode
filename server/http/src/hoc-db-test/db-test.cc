@@ -11,6 +11,14 @@
 using namespace hoc;
 using namespace std;
 
+void refresh() {
+  db_t db;
+  db.exec("BEGIN");
+  db.exec("DELETE FROM article WHERE id > 0");
+  db.exec("DELETE FROM \"user\" WHERE id > 0");
+  db.exec("END");
+}
+
 FIXTURE(environment_variables_found) {
   EXPECT_EQ(string(getenv("HOC_DB_NAME")), "hoc_dev");
   EXPECT_EQ(string(getenv("HOC_DB_HOST")), "hoc-db");
@@ -52,6 +60,7 @@ FIXTURE(db_gets_type_info) {
 }
 
 FIXTURE(db_does_query_params) {
+  refresh();
   db_t db;
   vector<const char *> params;
   params.push_back("email@email.com");
@@ -73,7 +82,12 @@ FIXTURE(db_does_query_params) {
 }
 
 FIXTURE(db_nice_error_msg) {
+  refresh();
   db_t db;
+  db.exec("BEGIN");
+  db.exec("DELETE FROM \"user\" WHERE id > 0");
+  db.exec("DELETE FROM article WHERE id > 0");
+  db.exec("END");
   vector<const char *> params;
   params.push_back("email@email.com");
 
@@ -92,7 +106,12 @@ FIXTURE(db_nice_error_msg) {
 }
 
 FIXTURE(db_does_mixed_params) {
+  refresh();
   db_t db;
+  db.exec("BEGIN");
+  db.exec("DELETE FROM \"user\" WHERE id > 0");
+  db.exec("DELETE FROM article WHERE id > 0");
+  db.exec("END");
 
   const char *email = "user@user.com";
   const char *title = "asdf";
@@ -135,13 +154,45 @@ FIXTURE(db_does_mixed_params) {
     string(title)
   }));
 
-  // delete all rows
+  EXPECT_EQ(user_res[0][0].int_val(), user_res_two[0][0].int_val());
+}
+
+FIXTURE(db_does_joins) {
+  refresh();
+  db_t db;
+
+  // insert user
   db.exec("BEGIN");
-  db.exec("DELETE FROM \"article\" WHERE id = $1", vector<db_param_t>({ article_res[0][0].int_val() }));
-  db.exec("DELETE FROM \"user\" WHERE id = $1", vector<db_param_t>({ user_res[0][0].int_val() }));
+  auto user = db.exec(
+    "INSERT INTO \"user\" (email) VALUES ($1) RETURNING id",
+    vector<db_param_t>({ "email@email.com" })
+  );
   db.exec("END");
 
-  EXPECT_EQ(user_res[0][0].int_val(), user_res_two[0][0].int_val());
+  // insert article
+  db.exec("BEGIN");
+  auto article = db.exec(
+    "INSERT INTO article (title, description, md, \"user\") VALUES ($1, $2, $3, $4)"
+    "RETURNING id",
+    vector<db_param_t>({ "asdf", "description", "md", user[0][0].int_val() })
+  );
+  db.exec("END");
+
+  db.exec("BEGIN");
+  auto joined = db.exec(
+    "SELECT C.email "
+    "FROM article P "
+    "INNER JOIN \"user\" C "
+    "ON C.id = P.user "
+    "WHERE C.id = $1",
+    vector<db_param_t>({ user[0][0].int_val() })
+  );
+  db.exec("END");
+
+  auto field_names = joined.field_names();
+
+  EXPECT_EQ(string("email"), field_names[0]);
+  EXPECT_EQ(string("email@email.com"), joined[0][0].data());
 }
 
 int main(int argc, char *argv[]) {
