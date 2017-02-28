@@ -28,6 +28,8 @@ public:
   void send_header(const std::string &key, const std::string &val) const;
   void send_body(const std::string &data) const;
   void set_status(int status) const;
+  std::string uri() const;
+  std::string method() const;
   header_list_t request_headers;
 
 private:

@@ -7,13 +7,12 @@ using namespace std;
 void hoc::app_t::main() {
   app_t &app = app_t::get();
 
-  //app.log("main");
-
-  app.on_start([&app]() {
-    //app.log("start");
+  app.on_start([]() {
+    assign_routes();
   });
 
   app.on_request([&app](const req_t &req) {
+    route_request(req);
 
     req.on_data([&app](const string &) {
       // get the request data located in body

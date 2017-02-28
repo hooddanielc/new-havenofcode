@@ -26,13 +26,20 @@ namespace hoc {
 
   template <typename T>
   class route_t {
-    public:
+    private:
+      route_t(route_t &&) = delete;
+      route_t(const route_t &) = delete;
+      route_t &operator=(route_t &&) = delete;
+      route_t &operator=(const route_t &) = delete;
+
+    protected:
       route_t(std::string pat) : pattern(pat) {}
 
-      void get(const T &req) {};
-      void post(const T &req) {};
-      void put(const T &req) {};
-      void del(const T &req) {};
+    public:
+      virtual void get(const T &, const url_match_result_t &) {};
+      virtual void post(const T &, const url_match_result_t &) {};
+      virtual void put(const T &, const url_match_result_t &) {};
+      virtual void del(const T &, const url_match_result_t &) {};
 
       std::string get_pattern() {
         return pattern;
@@ -122,42 +129,41 @@ namespace hoc {
         // match it against url
         std::vector<std::string> params;
         std::string subject(url);
+        std::string tmpp;
+        std::vector<std::string> subject_tokens;
 
-        for (url_token_t &tok : tokens) {
-          if (tok.type == url_literal) {
-            if (subject.size() < tok.val.size() + 1) {
-              return url_match_result_t();
-            } else {
-              if (
-                subject.substr(1, tok.val.size()) == tok.val &&
-                subject.substr(tok.val.size() + 1, 1) == "/"
-              ) {
-                subject.erase(0, tok.val.size() + 1);
-              } else {
-                return url_match_result_t();
-              }
-            }
-          } else if (tok.type == url_param) {
-            if (subject.size() > 0) {
-              size_t idx = subject.find_first_of("/", 1);
-              params.push_back(subject.substr(1, idx - 1));
+        for (size_t i = 0; i < subject.size(); ++i) {
+          char c = subject.at(i);
 
-              if (idx + 1 == subject.size()) {
-                subject.clear();
-              } else {
-                subject.erase(0, idx);
-              }
-            } else {
-              return url_match_result_t();
+          if (c == '/') {
+            if (tmpp.size() > 0) {
+              subject_tokens.push_back(tmpp);
+              tmpp.clear();
             }
+          } else if (c != '\0') {
+            tmpp += c;
           }
         }
 
-        if (subject.size() == 0) {
-          return url_match_result_t(params);
-        } else {
+        if (tmpp.size() > 0) {
+          subject_tokens.push_back(tmpp);
+        }
+
+        if (tokens.size() != subject_tokens.size()) {
           return url_match_result_t();
         }
+
+        for (size_t i = 0; i < tokens.size(); ++i) {
+          if (tokens[i].type == url_literal) {
+            if (tokens[i].val != subject_tokens[i]) {
+              return url_match_result_t();
+            }
+          } else if (tokens[i].type == url_param) {
+            params.push_back(subject_tokens[i]);
+          }
+        }
+
+        return url_match_result_t(params);
       }
     protected:
       std::string pattern;

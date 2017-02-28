@@ -134,6 +134,20 @@ void req_t::set_content_length(int len) const {
   current_request->headers_out.content_length_n = len;
 }
 
+string req_t::uri() const {
+  return string{
+    reinterpret_cast<char*>(current_request->uri.data),
+    static_cast<long unsigned int>(current_request->uri.len)
+  };
+}
+
+string req_t::method() const {
+  return string{
+    reinterpret_cast<char*>(current_request->method_name.data),
+    static_cast<long unsigned int>(current_request->method_name.len)
+  };
+}
+
 static ngx_int_t ngx_hoc_interface_on_http_request(ngx_http_request_t *r) {
   current_request = r;
   out = (ngx_chain_t*) ngx_pcalloc(current_request->pool, sizeof(ngx_chain_t));
