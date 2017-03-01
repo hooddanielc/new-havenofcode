@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <functional>
+#include <hoc/app.h>
 
 namespace hoc {
   enum url_token_type_t {
