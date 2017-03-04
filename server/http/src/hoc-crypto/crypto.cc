@@ -52,32 +52,28 @@ namespace hoc {
       static constexpr unsigned bits = 64;
 
       // choose p
-      if (p == 0) {
-        p = another_rnd(bits);
-        mpz_setbit(p.get_mpz_t(), bits - 1);
-        mpz_nextprime(p.get_mpz_t(), p.get_mpz_t());
-        mpz_mod(tmp1.get_mpz_t(), p.get_mpz_t(), e.get_mpz_t());
+      p = another_rnd(bits);
+      mpz_setbit(p.get_mpz_t(), bits - 1);
+      mpz_nextprime(p.get_mpz_t(), p.get_mpz_t());
+      mpz_mod(tmp1.get_mpz_t(), p.get_mpz_t(), e.get_mpz_t());
 
-        while(!mpz_cmp_ui(tmp1.get_mpz_t(), 1)) {
-         mpz_nextprime(p.get_mpz_t(), p.get_mpz_t());
-         mpz_mod(tmp1.get_mpz_t(), p.get_mpz_t(), e.get_mpz_t());
-        }
+      while(!mpz_cmp_ui(tmp1.get_mpz_t(), 1)) {
+       mpz_nextprime(p.get_mpz_t(), p.get_mpz_t());
+       mpz_mod(tmp1.get_mpz_t(), p.get_mpz_t(), e.get_mpz_t());
       }
 
       // choose q
-      if (q == 0) {
-        do {
-          q = another_rnd(bits);
-          mpz_setbit(q.get_mpz_t(), bits - 1);
+      do {
+        q = another_rnd(bits);
+        mpz_setbit(q.get_mpz_t(), bits - 1);
+        mpz_nextprime(q.get_mpz_t(), q.get_mpz_t());
+        mpz_mod(tmp1.get_mpz_t(), q.get_mpz_t(), e.get_mpz_t());
+
+        while(!mpz_cmp_ui(tmp1.get_mpz_t(), 1)) {
           mpz_nextprime(q.get_mpz_t(), q.get_mpz_t());
           mpz_mod(tmp1.get_mpz_t(), q.get_mpz_t(), e.get_mpz_t());
-
-          while(!mpz_cmp_ui(tmp1.get_mpz_t(), 1)) {
-            mpz_nextprime(q.get_mpz_t(), q.get_mpz_t());
-            mpz_mod(tmp1.get_mpz_t(), q.get_mpz_t(), e.get_mpz_t());
-          }
-        } while(mpz_cmp(p.get_mpz_t(), q.get_mpz_t()) == 0);
-      }
+        }
+      } while(mpz_cmp(p.get_mpz_t(), q.get_mpz_t()) == 0);
 
       // calculate n
       mpz_mul(n.get_mpz_t(), p.get_mpz_t(), q.get_mpz_t());
