@@ -24,6 +24,9 @@ RUN cd ~/nginx-1.10.2 && ./configure --with-http_ssl_module --add-module=/root/n
 RUN cd ~/nginx-1.10.2 && make -j$(grep -c ^processor /proc/cpuinfo) && make install
 RUN rm ~/nginx-1.10.2.tar.gz
 
+# install gmp for cryptography
+RUN apt install -y libgmp-dev
+
 # setup
 RUN echo 'cd $HOME' >> $HOME/.zshrc
 
