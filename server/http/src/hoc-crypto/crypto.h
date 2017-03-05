@@ -7,6 +7,8 @@
 
 namespace hoc {
   namespace crypto {
+    mpz_class huge_random_number(unsigned bits);
+
     class rsa_crypto_key_t final {
       public:
         rsa_crypto_key_t(

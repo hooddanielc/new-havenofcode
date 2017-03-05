@@ -1,5 +1,5 @@
 #include <hoc-db/db_col.h>
-
+#include <iostream>
 using namespace std;
 
 namespace hoc {
@@ -29,5 +29,9 @@ namespace hoc {
 
   int db_col_t::int_val() {
     return ntohl(*((uint32_t *) data()));
+  }
+
+  bool db_col_t::bool_val() {
+    return *data() + 0;
   }
 }

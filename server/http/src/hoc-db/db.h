@@ -9,7 +9,7 @@
 #include <functional> 
 #include <cctype>
 #include <locale>
-#include <libpq-fe.h>
+#include <postgresql/libpq-fe.h>
 #include <hoc-db/db_result.h>
 #include <hoc-db/db_param.h>
 
@@ -22,10 +22,14 @@ namespace hoc {
       db_t();
       ~db_t();
       const char *host();
+      const char *port();
+      const char *hostaddr();
       const char *user();
       const char *dbname();
       const char *password();
-      const char *con_str();
+      std::string con_str();
+      const char *status();
+      const char *last_error();
       bool connected();
       db_result_t exec(const char *query, const text_params_t &params);
       db_result_t exec(const char *query, const mixed_params_t &params);

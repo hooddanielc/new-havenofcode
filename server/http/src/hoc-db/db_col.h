@@ -17,6 +17,7 @@ namespace hoc {
       int num();
       bool empty();
       int int_val();
+      bool bool_val();
 
     private:
       PGresult *res;

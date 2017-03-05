@@ -555,6 +555,11 @@ namespace dj {
       return *state;
     }
 
+    template <typename state_t>
+    const state_t &as() const {
+      return get_state<state_t>();
+    }
+
     /* Our state object if we are of the requested kind; otherwise, we
        throw. */
     template <typename state_t>

@@ -2,7 +2,7 @@
 
 module.exports = {
   up: function (queryInterface, Sequelize) {
-    return queryInterface.createTable('user', {
+    return queryInterface.createTable('registration', {
       id: {
         type: Sequelize.INTEGER,
         primaryKey: true,
@@ -16,23 +16,31 @@ module.exports = {
         type: Sequelize.DATE,
         defaultValue: Sequelize.literal('NOW()')
       },
-      email: {
-        type: Sequelize.STRING,
-        unique: true,
-        allowNull: false
-      },
-      github_id: {
-        type: Sequelize.INTEGER,
-        unique: true
-      },
-      active: {
+      deleted: {
         type: Sequelize.BOOLEAN,
         defaultValue: false
+      },
+      user: {
+        type: Sequelize.INTEGER,
+        references: { model: 'user', key: 'id' },
+        allowNull: false
+      },
+      rsaPubD: {
+        type: Sequelize.STRING,
+        allowNull: false
+      },
+      rsaPubN: {
+        type: Sequelize.STRING,
+        allowNull: false
+      },
+      secret: {
+        type: Sequelize.STRING,
+        allowNull: false
       }
     });
   },
 
   down: function (queryInterface, Sequelize) {
-    return queryInterface.dropTable('user');
+    return queryInterface.dropTable('registration');
   }
 };

@@ -5,7 +5,7 @@ using namespace std;
 namespace hoc {
   namespace crypto {
 
-    mpz_class another_rnd(unsigned bits) {
+    mpz_class huge_random_number(unsigned bits) {
       static constexpr size_t buffer_size = 64; // number of random bytes to seed with
       char buffer[buffer_size];
       {
@@ -52,7 +52,7 @@ namespace hoc {
       static constexpr unsigned bits = 64;
 
       // choose p
-      p = another_rnd(bits);
+      p = huge_random_number(bits);
       mpz_setbit(p.get_mpz_t(), bits - 1);
       mpz_nextprime(p.get_mpz_t(), p.get_mpz_t());
       mpz_mod(tmp1.get_mpz_t(), p.get_mpz_t(), e.get_mpz_t());
@@ -64,7 +64,7 @@ namespace hoc {
 
       // choose q
       do {
-        q = another_rnd(bits);
+        q = huge_random_number(bits);
         mpz_setbit(q.get_mpz_t(), bits - 1);
         mpz_nextprime(q.get_mpz_t(), q.get_mpz_t());
         mpz_mod(tmp1.get_mpz_t(), q.get_mpz_t(), e.get_mpz_t());

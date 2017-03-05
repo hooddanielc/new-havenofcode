@@ -14,6 +14,7 @@ using namespace std;
 void refresh() {
   db_t db;
   db.exec("BEGIN");
+  db.exec("DELETE FROM registration WHERE id > 0");
   db.exec("DELETE FROM article WHERE id > 0");
   db.exec("DELETE FROM \"user\" WHERE id > 0");
   db.exec("END");
@@ -36,7 +37,10 @@ FIXTURE(db_t_uses_envs) {
 
 FIXTURE(db_t_con_str) {
   db_t db;
-  EXPECT_EQ(string(db.con_str()), "host = hoc-db dbname = hoc_dev user = admin_dev password = 123123");
+  EXPECT_EQ(
+    string(db.con_str()),
+    "host=hoc-db port=5432 dbname=hoc_dev user=admin_dev password=123123 connect_timeout=1000"
+  );
 }
 
 FIXTURE(db_t_is_connected) {
@@ -60,6 +64,10 @@ FIXTURE(db_gets_type_info) {
 }
 
 FIXTURE(db_does_query_params) {
+  EXPECT_EQ(string(getenv("HOC_DB_NAME")), "hoc_dev");
+  EXPECT_EQ(string(getenv("HOC_DB_HOST")), "hoc-db");
+  EXPECT_EQ(string(getenv("HOC_DB_USER")), "admin_dev");
+  EXPECT_EQ(string(getenv("HOC_DB_PASSWORD")), "123123");
   refresh();
   db_t db;
   vector<const char *> params;

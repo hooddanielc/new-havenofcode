@@ -31,6 +31,19 @@ namespace hoc {
     char_cbs[db_param_str] = [](db_param_t &param) {
       return param.str_val.c_str();
     };
+
+    // db_param_bool
+    bool_cbs[db_param_bool] = [](db_param_t &) {
+      return false;
+    };
+
+    size_cbs[db_param_bool] = [](db_param_t &) {
+      return 1;
+    };
+
+    char_cbs[db_param_bool] = [](db_param_t &param) {
+      return param.bool_val == true ? "t" : "f";
+    };
   }
 
   size_t db_param_t::size() const {

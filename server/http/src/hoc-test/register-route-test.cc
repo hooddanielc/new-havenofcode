@@ -1,6 +1,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <hoc-db/db.h>
 #include <lick/lick.h>
 #include <hoc/json.h>
 #include <hoc/routes/register.h>
@@ -33,6 +34,14 @@ class request_fixture {
     }
 };
 
+void refresh_db() {
+  db_t db;
+  db.exec("BEGIN");
+  db.exec("DELETE FROM article WHERE id > 0");
+  db.exec("DELETE FROM registration WHERE id > 0");
+  db.exec("DELETE FROM \"user\" WHERE id > 0");
+  db.exec("END");
+}
 
 request_fixture make_request() {
   unique_ptr<route_t<request_fixture>> route(new register_route_t<request_fixture>());
@@ -47,8 +56,8 @@ FIXTURE(fails_if_invalid_json) {
   fixture.data_func("asdfasdf sdf: sdfjjj123 <>");
   fixture.end_func();
   auto response = dj::json_t::from_string(fixture.body_sent.c_str());
-  EXPECT_EQ("true", response["error"].to_string());
-  EXPECT_EQ("\"invalid json\"", response["message"].to_string());
+  EXPECT_EQ(true, response["error"].as<bool>());
+  EXPECT_EQ("invalid json", response["message"].as<string>());
 }
 
 FIXTURE(invalid_params) {
@@ -58,19 +67,82 @@ FIXTURE(invalid_params) {
   fixture.data_func(json.to_string());
   fixture.end_func();
   auto response = dj::json_t::from_string(fixture.body_sent.c_str());
-  EXPECT_EQ("true", response["error"].to_string());
-  EXPECT_EQ("\"invalid json\"", response["message"].to_string());
+  EXPECT_EQ(true, response["error"].as<bool>());
+  EXPECT_EQ("invalid json", response["message"].as<string>());
 }
 
-FIXTURE(creates_row) {
-  // TODO - create table
-  // TODO - create email interface
+FIXTURE(user_already_registered) {
+  refresh_db();
+  db_t db;
+  db.exec("BEGIN");
+  db.exec("INSERT INTO \"user\" (email, active) VALUES ($1, $2)", vector<db_param_t>({
+    "test@test.com",
+    true
+  }));
+  db.exec("END");
+
   auto json = dj::json_t::from_string("{\"user\": {}}");
   json["user"]["email"] = "test@test.com";
   json["user"]["password"] = "password";
   auto fixture = make_request();
   fixture.data_func(json.to_string());
   fixture.end_func();
+  auto response = dj::json_t::from_string(fixture.body_sent.c_str());
+  EXPECT_EQ(response["error"].as<bool>(), true);
+  EXPECT_EQ(response["message"].as<string>(), "user active");
+}
+
+FIXTURE(deletes_pending_registration) {
+  refresh_db();
+  db_t db;
+  db.exec("BEGIN");
+
+  auto user = db.exec(
+    "INSERT INTO \"user\" (email) VALUES ($1)"
+    "RETURNING id",
+    vector<db_param_t>({
+      "test@test.com"
+    })
+  );
+
+  auto to_delete = db.exec(
+    "INSERT INTO registration (\"user\", \"rsaPubD\", \"rsaPubN\", \"secret\")"
+    "VALUES ($1, $2, $3, $4)"
+    "RETURNING id",
+    vector<db_param_t>({
+      user[0][0].int_val(),
+      "asdf",
+      "asdf",
+      "asdf"
+    })
+  );
+
+  db.exec("END");
+
+  auto json = dj::json_t::from_string("{\"user\": {}}");
+  json["user"]["email"] = "test@test.com";
+  json["user"]["password"] = "password";
+  auto fixture = make_request();
+  fixture.data_func(json.to_string());
+  fixture.end_func();
+
+  db.exec("BEGIN");
+  auto deleted = db.exec(
+    "SELECT deleted FROM registration WHERE id = $1",
+    vector<db_param_t>({ to_delete[0][0].int_val() })
+  );
+  auto nondeleted = db.exec(
+    "SELECT deleted, \"rsaPubD\", \"rsaPubN\", secret "
+    "FROM registration WHERE \"user\" = $1 AND deleted = $2",
+    vector<db_param_t>({ user[0][0].int_val(), false })
+  );
+  db.exec("END");
+
+  EXPECT_EQ(deleted[0][0].bool_val(), true);
+  EXPECT_EQ(nondeleted[0][0].bool_val(), false);
+  EXPECT_GT(nondeleted[0][1].size(), static_cast<unsigned int>(10));
+  EXPECT_GT(nondeleted[0][2].size(), static_cast<unsigned int>(10));
+  EXPECT_GT(nondeleted[0][3].size(), static_cast<unsigned int>(10));
 }
 
 int main(int argc, char *argv[]) {

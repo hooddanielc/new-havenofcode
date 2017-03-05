@@ -13,7 +13,8 @@ namespace hoc {
 
   enum db_param_type_t {
     db_param_int,
-    db_param_str
+    db_param_str,
+    db_param_bool
   };
 
   class db_param_cb_t final {
@@ -46,6 +47,7 @@ namespace hoc {
       db_param_t(int num) : cache(nullptr), type(db_param_int), num_val(num) {}
       db_param_t(const char *str) : cache(nullptr), type(db_param_str), str_val(str) {}
       db_param_t(const std::string &str) : cache(nullptr), type(db_param_str), str_val(str) {}
+      db_param_t(bool val) : cache(nullptr), type(db_param_bool), bool_val(val) {}
 
       ~db_param_t() {
         free(cache);
@@ -59,6 +61,7 @@ namespace hoc {
       char *cache;
       db_param_type_t type;
       int num_val;
+      bool bool_val;
       std::string str_val;
   };
 }
