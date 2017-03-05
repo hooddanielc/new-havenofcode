@@ -27,6 +27,17 @@ RUN rm ~/nginx-1.10.2.tar.gz
 # install gmp for cryptography
 RUN apt install -y libgmp-dev
 
+# install vmime for email
+RUN cd /opt && git clone https://github.com/kisli/vmime.git
+RUN apt install -y cmake
+RUN apt install -y libicu-dev
+RUN apt install -y gnutls-dev
+RUN apt install -y libgsasl7-dev
+RUN apt install -y libboost-all-dev
+RUN apt install -y libgtk-3-dev
+RUN cd /opt/vmime && mkdir build && cd build && cmake ..
+RUN cd /opt/vmime/build && make && make install
+
 # setup
 RUN echo 'cd $HOME' >> $HOME/.zshrc
 
