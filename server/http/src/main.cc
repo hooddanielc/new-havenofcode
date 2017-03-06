@@ -2,13 +2,14 @@
 #include <string>
 #include <cstdio>
 
+#include <hoc/main.h>
+#include <hoc-mail/mail.h>
+
 extern "C" {
   #include <ngx_config.h>
   #include <ngx_core.h>
   #include <ngx_http.h>
 }
-
-#include <hoc/main.h>
 
 using namespace std;
 using namespace hoc;
@@ -138,6 +139,34 @@ string req_t::uri() const {
   return string{
     reinterpret_cast<char*>(current_request->uri.data),
     static_cast<long unsigned int>(current_request->uri.len)
+  };
+}
+
+string req_t::args() const {
+  return string{
+    reinterpret_cast<char*>(current_request->args.data),
+    static_cast<long unsigned int>(current_request->args.len)
+  };
+}
+
+string req_t::request_line() const {
+  return string{
+    reinterpret_cast<char*>(current_request->request_line.data),
+    static_cast<long unsigned int>(current_request->request_line.len)
+  };
+}
+
+string req_t::exten() const {
+  return string{
+    reinterpret_cast<char*>(current_request->exten.data),
+    static_cast<long unsigned int>(current_request->exten.len)
+  };
+}
+
+string req_t::unparsed_uri() const {
+  return string{
+    reinterpret_cast<char*>(current_request->unparsed_uri.data),
+    static_cast<long unsigned int>(current_request->unparsed_uri.len)
   };
 }
 

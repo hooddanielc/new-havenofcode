@@ -6,6 +6,7 @@
 #include <sstream>
 #include <hoc/json.h>
 #include <hoc/route.h>
+#include <hoc-db/db.h>
 #include <hoc-crypto/crypto.h>
 
 using namespace std;
@@ -111,8 +112,7 @@ namespace hoc {
 
         // send an email to the user at the email address
         // with the encrypted message
-        
-
+        app_t::get().send_registration_email(email, encrypted_message.get_str());
         return user;
       }
 
@@ -144,10 +144,10 @@ namespace hoc {
             return post_end_invalid_json(req);
           }
 
-          try {
-            db_t db;
-            db.exec("BEGIN TRANSACTION");
+          db_t db;
+          db.exec("BEGIN TRANSACTION");
 
+          try {
             if (user_active(email, db) == true) {
               return post_end_invalid_user_json(req);
             }
@@ -155,6 +155,7 @@ namespace hoc {
             refresh_registration(email, db);
             db.exec("COMMIT");
           } catch (runtime_error e) {
+            db.exec("ROLLBACK");
             cout << e.what() << endl;
             return post_end_critical_error(req);
           }

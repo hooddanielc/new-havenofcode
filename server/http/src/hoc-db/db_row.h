@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include <stdlib.h>
-#include <libpq-fe.h>
+#include <postgresql/libpq-fe.h>
 #include <hoc-db/db_col.h>
 
 namespace hoc {

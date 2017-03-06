@@ -35,18 +35,37 @@ RUN apt install -y gnutls-dev
 RUN apt install -y libgsasl7-dev
 RUN apt install -y libboost-all-dev
 RUN apt install -y libgtk-3-dev
-RUN cd /opt/vmime && mkdir build && cd build && cmake ..
-RUN cd /opt/vmime/build && make && make install
+
+RUN cd /opt/vmime && cmake . \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX=/usr \
+  -DVMIME_TLS_SUPPORT_LIB=openssl
+
+# install libcurl for simple http client functionality
+RUN apt install -y libcurl4-gnutls-dev
+
+RUN cd /opt/vmime && make -j$(grep -c ^processor /proc/cpuinfo)
+RUN cd /opt/vmime && make install
 
 # setup
 RUN echo 'cd $HOME' >> $HOME/.zshrc
 
 # set path
 ENV PATH $PATH:/usr/local/nginx/sbin:/root/ib:/root/scripts
+
+# environment env
+ENV HOC_DOMAIN localhost:1337
+
+# db env
 ENV HOC_DB_NAME hoc_dev
 ENV HOC_DB_USER admin_dev
 ENV HOC_DB_PASSWORD 123123
 ENV HOC_DB_HOST hoc-db
+
+# registration with gmail
+ENV HOC_GOOGLE_API_CLIENT_ID XXXXXXXX
+ENV HOC_GOOGLE_API_CLIENT_SECRET XXXXXXXX
+ENV HOC_NOREPLY_EMAIL noreply@havenofcode.com
 
 # add nginx config
 ADD ./config /root/config

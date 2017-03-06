@@ -10,6 +10,7 @@
 #include <cctype>
 #include <locale>
 #include <postgresql/libpq-fe.h>
+#include <hoc/app.h>
 #include <hoc-db/db_result.h>
 #include <hoc-db/db_param.h>
 
@@ -22,8 +23,6 @@ namespace hoc {
       db_t();
       ~db_t();
       const char *host();
-      const char *port();
-      const char *hostaddr();
       const char *user();
       const char *dbname();
       const char *password();

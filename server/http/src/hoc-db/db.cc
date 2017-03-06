@@ -121,36 +121,27 @@ namespace hoc {
   }
 
   const char *db_t::host() {
-    return getenv("HOC_DB_HOST");
+    return app_t::get().db_host;
   }
 
   const char *db_t::user() {
-    return getenv("HOC_DB_USER");
+    return app_t::get().db_user;
   }
 
   const char *db_t::dbname() {
-    return getenv("HOC_DB_NAME");
+    return app_t::get().db_name;
   }
 
   const char *db_t::password() {
-    return getenv("HOC_DB_PASSWORD");
-  }
-
-  const char *db_t::hostaddr() {
-    return getenv("HOC_DB_PORT_5432_TCP_ADDR");
-  }
-
-  const char *db_t::port() {
-    return getenv("HOC_DB_PORT_5432_TCP_PORT");
+    return app_t::get().db_pass;
   }
 
   string db_t::con_str() {
     return string()
       .append("host=").append(host())
-      .append(" port=").append(port())
       .append(" dbname=").append(dbname())
       .append(" user=").append(user())
       .append(" password=").append(password())
-      .append(" connect_timeout=1000");
+      .append(" connect_timeout=10");
   }
 }

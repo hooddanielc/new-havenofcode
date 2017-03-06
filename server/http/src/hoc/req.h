@@ -30,6 +30,10 @@ public:
   void set_status(int status) const;
   std::string uri() const;
   std::string method() const;
+  std::string args() const;
+  std::string request_line() const;
+  std::string exten() const;
+  std::string unparsed_uri() const;
   header_list_t request_headers;
 
 private:

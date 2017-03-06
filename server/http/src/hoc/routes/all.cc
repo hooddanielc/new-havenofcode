@@ -7,6 +7,9 @@ namespace hoc {
 
   void assign_routes()  {
     routes.push_back(unique_ptr<route_t<req_t>>(new login_route_t<req_t>()));
+    routes.push_back(unique_ptr<route_t<req_t>>(new register_route_t<req_t>()));
+    routes.push_back(unique_ptr<route_t<req_t>>(new set_noreply_token_route_t<req_t>()));
+    routes.push_back(unique_ptr<route_t<req_t>>(new set_noreply_token_callback_route_t<req_t>()));
   }
 
   void route_request(const req_t &req) {

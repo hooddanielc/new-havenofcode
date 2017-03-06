@@ -3,7 +3,7 @@
 #include <iostream>
 #include <map>
 #include <string>
-#include <libpq-fe.h>
+#include <postgresql/libpq-fe.h>
 #include <hoc-db/db.h>
 
 namespace hoc {

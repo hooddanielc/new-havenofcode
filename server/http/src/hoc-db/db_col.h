@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 #include <netinet/in.h>
-#include <libpq-fe.h>
+#include <postgresql/libpq-fe.h>
 
 namespace hoc {
   class db_row_t;

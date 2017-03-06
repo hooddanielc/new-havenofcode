@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <cstdlib>
 #include <map>
 #include <vector>
 #include <functional>
@@ -16,6 +17,8 @@ using cb_void_t = std::function<void()>;
 
 using cb_request_list_t = std::vector<cb_request_t>;
 using cb_void_list_t = std::vector<cb_void_t>;
+
+std::string url_encode(const std::string &str);
 
 class app_t final {
   public:
@@ -33,6 +36,9 @@ class app_t final {
     void emit_exit();
     void log(const std::string &str);
 
+    // defined in <hoc-mail/mail.cc>
+    void send_registration_email(const std::string &email, const std::string &secret);
+
     // defined in <hoc/main.cc>
     void main();
 
@@ -43,6 +49,15 @@ class app_t final {
 
     app_t &clear();
 
+    const char *host;
+    const char *db_name;
+    const char *db_user;
+    const char *db_pass;
+    const char *db_host;
+    const char *google_api_client_id;
+    const char *google_api_client_secret;
+    const char *no_reply_email;
+
   private:
     cb_request_list_t request_events;
     cb_void_list_t start_events;
@@ -51,7 +66,17 @@ class app_t final {
     template<typename T>
     void emit_void(const T &list);
 
-    app_t(): status(200) {};
+    app_t():
+        status(200),
+        host(std::getenv("HOC_DOMAIN")),
+        db_name(std::getenv("HOC_DB_NAME")),
+        db_user(std::getenv("HOC_DB_USER")),
+        db_pass(std::getenv("HOC_DB_PASSWORD")),
+        db_host(std::getenv("HOC_DB_HOST")),
+        google_api_client_id(std::getenv("HOC_GOOGLE_API_CLIENT_ID")),
+        google_api_client_secret(std::getenv("HOC_GOOGLE_API_CLIENT_SECRET")),
+        no_reply_email(std::getenv("HOC_NOREPLY_EMAIL")) {};
+
     app_t(app_t &&) = delete;
     app_t(const app_t &) = delete;
     ~app_t() = default;

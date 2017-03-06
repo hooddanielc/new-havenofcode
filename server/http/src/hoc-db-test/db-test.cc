@@ -1,7 +1,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <string>
-#include <libpq-fe.h>
+#include <postgresql/libpq-fe.h>
 #include <vector>
 #include <lick/lick.h>
 #include <hoc-db/db.h>
@@ -39,7 +39,7 @@ FIXTURE(db_t_con_str) {
   db_t db;
   EXPECT_EQ(
     string(db.con_str()),
-    "host=hoc-db port=5432 dbname=hoc_dev user=admin_dev password=123123 connect_timeout=1000"
+    "host=hoc-db dbname=hoc_dev user=admin_dev password=123123 connect_timeout=10"
   );
 }
 

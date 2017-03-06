@@ -47,7 +47,15 @@ ADD ./db-tools/migrations /var/lib/postgresql/db-tools/migrations
 RUN cd $HOME/db-tools && ./node_modules/.bin/gulp
 
 RUN  pg_ctl -w start -D $HOME/data && \
-  cd $HOME/db-tools && ./node_modules/.bin/sequelize db:migrate && \
+  cd $HOME/db-tools && ./node_modules/.bin/sequelize db:migrate --env development && \
+  cd $HOME/db-tools && ./node_modules/.bin/sequelize db:migrate --env test && \
+  cd $HOME/db-tools && ./node_modules/.bin/sequelize db:migrate --env production && \
+  pg_ctl -w stop -D $HOME/data
+
+RUN  pg_ctl -w start -D $HOME/data && \
+  psql -U admin_dev -d hoc_dev -f $HOME/install-scripts/insert-app-specific-tokens.sql && \
+  psql -U admin_test -d hoc_test -f $HOME/install-scripts/insert-app-specific-tokens.sql && \
+  psql -U admin_prod -d hoc_prod -f $HOME/install-scripts/insert-app-specific-tokens.sql && \
   pg_ctl -w stop -D $HOME/data
 
 # Postgres listens on 5432

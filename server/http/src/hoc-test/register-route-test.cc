@@ -4,10 +4,19 @@
 #include <hoc-db/db.h>
 #include <lick/lick.h>
 #include <hoc/json.h>
+#include <hoc/app.h>
 #include <hoc/routes/register.h>
 
 using namespace hoc;
 using namespace std;
+
+string last_email_set;
+string last_secret_set;
+
+void app_t::send_registration_email(const std::string &email, const std::string &secret) {
+  last_email_set = email;
+  last_secret_set = secret;
+}
 
 class request_fixture {
   public:
@@ -101,7 +110,7 @@ FIXTURE(deletes_pending_registration) {
     "INSERT INTO \"user\" (email) VALUES ($1)"
     "RETURNING id",
     vector<db_param_t>({
-      "test@test.com"
+      "hood.danielc@gmail.com"
     })
   );
 
@@ -120,7 +129,7 @@ FIXTURE(deletes_pending_registration) {
   db.exec("END");
 
   auto json = dj::json_t::from_string("{\"user\": {}}");
-  json["user"]["email"] = "test@test.com";
+  json["user"]["email"] = "hood.danielc@gmail.com";
   json["user"]["password"] = "password";
   auto fixture = make_request();
   fixture.data_func(json.to_string());
@@ -138,11 +147,26 @@ FIXTURE(deletes_pending_registration) {
   );
   db.exec("END");
 
+  // decrypt the encrypted message
+  mpz_class decrypted;
+  mpz_class d(nondeleted[0][1].data());
+  mpz_class n(nondeleted[0][2].data());
+  mpz_class encrypted(last_secret_set);
+  mpz_class secret_message(nondeleted[0][3].data());
+
+  mpz_powm(
+    decrypted.get_mpz_t(),
+    encrypted.get_mpz_t(),
+    d.get_mpz_t(),
+    n.get_mpz_t()
+  );
+
   EXPECT_EQ(deleted[0][0].bool_val(), true);
   EXPECT_EQ(nondeleted[0][0].bool_val(), false);
   EXPECT_GT(nondeleted[0][1].size(), static_cast<unsigned int>(10));
   EXPECT_GT(nondeleted[0][2].size(), static_cast<unsigned int>(10));
   EXPECT_GT(nondeleted[0][3].size(), static_cast<unsigned int>(10));
+  EXPECT_EQ(decrypted, secret_message);
 }
 
 int main(int argc, char *argv[]) {
