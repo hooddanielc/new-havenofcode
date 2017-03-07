@@ -34,7 +34,7 @@ public:
   std::string request_line() const;
   std::string exten() const;
   std::string unparsed_uri() const;
-  header_list_t request_headers;
+  mutable header_list_t request_headers;
 
 private:
 

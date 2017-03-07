@@ -1,0 +1,53 @@
+#pragma once
+
+#include <hoc/route.h>
+
+using namespace std;
+
+namespace hoc {
+  template<typename T>
+  class echo_route_t : public route_t<T> {
+    public:
+      echo_route_t() : route_t<T>("/api/echo") {}
+
+      void serve(const T &req) const {
+        auto str = new string();
+        str->append(req.request_line());
+
+        for (auto it = req.request_headers.begin(); it != req.request_headers.end(); ++it) {
+          str->append("\n").append(it->first).append(" ").append(it->second);
+        }
+
+        str->append("\n\n");
+
+        req.on_data([str](const string &data) {
+          cout << "GOT SOME DATA" << endl;
+          str->append(data);
+        });
+
+        req.on_end([&, str]() {
+          req.set_status(200);
+          req.send_header("Content-Type", "text/html");
+          req.set_content_length(str->size());
+          req.send_body(*str);
+          delete str;
+        });
+      }
+
+      void get(const T &req, const url_match_result_t &) override {
+        serve(req);
+      }
+
+      void post(const T &req, const url_match_result_t &) override {
+        serve(req);
+      }
+
+      void put(const T &req, const url_match_result_t &) override {
+        serve(req);
+      }
+
+      void del(const T &req, const url_match_result_t &) override {
+        serve(req);
+      }
+  };
+}

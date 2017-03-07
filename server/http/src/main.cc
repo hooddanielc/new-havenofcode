@@ -18,7 +18,7 @@ req_t *current_req = NULL;
 ngx_http_request_t *current_request;
 ngx_chain_t *out;
 
-static void ngx_http_sample_put_handler(ngx_http_request_t *) {
+static void ngx_http_sample_put_handler(ngx_http_request_t *r) {
   if (current_request->request_body->temp_file == NULL) {
     /*
      * The entire request body is available in the list
@@ -63,6 +63,15 @@ static void ngx_http_sample_put_handler(ngx_http_request_t *) {
       offset = offset + ret;
     }
   }
+
+  // we are done reading request
+  current_req->emit_end();
+  ngx_http_send_header(current_request);
+
+  // send the body and return the status code of the output filter chain
+  ngx_http_finalize_request(r, ngx_http_output_filter(r, out));
+  delete current_req;
+  ngx_pfree(r->pool, out);
 }
 
 void
@@ -224,17 +233,12 @@ static ngx_int_t ngx_hoc_interface_on_http_request(ngx_http_request_t *r) {
   rc = ngx_http_read_client_request_body(current_request, ngx_http_sample_put_handler);
 
   if (rc >= NGX_HTTP_SPECIAL_RESPONSE) {
+    cout << "uhm special" << endl;
     return rc;
+  } else if (rc == NGX_AGAIN) {
+    return NGX_DONE;
   }
 
-  // we are done
-  current_req->emit_end();
-  ngx_http_send_header(current_request);
-
-  // send the body and return the status code of the output filter chain
-  ngx_http_finalize_request(r, ngx_http_output_filter(r, out));
-  delete current_req;
-  ngx_pfree(r->pool, out);
   return NGX_OK;
 }
 
