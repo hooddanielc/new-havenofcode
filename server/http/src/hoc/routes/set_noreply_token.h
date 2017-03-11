@@ -28,7 +28,7 @@ namespace hoc {
             .append("access_type=offline");
 
           // redirect to google login
-          req.set_status(302);
+          req.set_status(301);
 
           req.send_header(
             "Location",

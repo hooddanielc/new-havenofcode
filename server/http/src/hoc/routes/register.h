@@ -59,17 +59,17 @@ namespace hoc {
         return active_user.rows() == 1;
       }
 
-      db_result_t refresh_registration(const string &email, db_t &db) {
+      int get_user_id(const string &email, db_t &db) {
         auto user = db.exec(
           "SELECT id FROM \"user\" WHERE email = $1",
           vector<db_param_t>({ email })
         );
 
         if (user.rows() == 0) {
-          user = db.exec(
+          return db.exec(
             "INSERT INTO \"user\" (email) VALUES ($1) RETURNING id",
             vector<db_param_t>({ email })
-          );
+          )[0][0].int_val();
         } else {
           // delete old registrations
           db.exec(
@@ -79,6 +79,12 @@ namespace hoc {
             })
           );
         }
+
+        return user[0][0].int_val();
+      }
+
+      int refresh_registration(const string &email, db_t &db) {
+        int user = get_user_id(email, db);
 
         // insert a new registration with private key
         crypto::rsa_crypto_t keys;
@@ -95,15 +101,15 @@ namespace hoc {
           pub.get_k1().get_mpz_t(),
           pub.get_k2().get_mpz_t()
         );
-        
+
         // insert private key into database
         // along with the secret message
-        db.exec(
+        auto id = db.exec(
           "INSERT INTO registration (\"user\", \"rsaPubD\", \"rsaPubN\", \"secret\")"
           "VALUES ($1, $2, $3, $4)"
-          "RETURNING id",
+          "RETURNING user",
           vector<db_param_t>({
-            user[0][0].int_val(),
+            user,
             string(pri.get_k1().get_str()),
             string(pri.get_k2().get_str()),
             string(secret_message.get_str())
@@ -130,15 +136,10 @@ namespace hoc {
           string email;
           string password;
 
-          try {
-            json = dj::json_t::from_string((*str).c_str());
-            email = json["user"]["email"].as<string>();
-            password = json["user"]["password"].as<string>();
-            delete str;
-          } catch (...) {
-            delete str;
-            return post_end_invalid_json(req);
-          }
+          json = dj::json_t::from_string((*str).c_str());
+          email = json["user"]["email"].as<string>();
+          password = json["user"]["password"].as<string>();
+          delete str;
 
           if (password == "null" || email == "null") {
             return post_end_invalid_json(req);
@@ -152,12 +153,21 @@ namespace hoc {
               return post_end_invalid_user_json(req);
             }
 
-            refresh_registration(email, db);
+            int user_id = refresh_registration(email, db);
             db.exec("COMMIT");
+
+            // done
+            req.set_status(200);
+            auto json = dj::json_t::empty_object;
+            json["user"] = dj::json_t::empty_object;
+            json["user"]["email"] = email;
+            json["user"]["id"] = user_id;
+            string out(json.to_string());
+            req.set_content_length(out.size());
+            req.send_body(out);
           } catch (runtime_error e) {
             db.exec("ROLLBACK");
-            cout << e.what() << endl;
-            return post_end_critical_error(req);
+            throw e;
           }
         });
       }

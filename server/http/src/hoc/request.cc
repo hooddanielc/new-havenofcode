@@ -11,7 +11,7 @@ size_t request_t::write_func(void *ptr, size_t size, size_t nmemb, request_t *ca
   return size*nmemb;
 }
 
-size_t request_t::string_read_func(void *ptr, size_t size, size_t nmemb, write_t *cake) {
+size_t request_t::string_read_func(void *ptr, size_t, size_t, write_t *cake) {
   if (cake->sizeleft) {
     *(char *) ptr = cake->readptr[0];
     cake->readptr++;

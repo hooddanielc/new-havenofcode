@@ -91,28 +91,6 @@ namespace mail {
 } // hoc
 
 namespace hoc {
-  struct http_response_buff_t {
-    char *memory;
-    size_t size;
-  };
-
-  static size_t
-  write_http_response_cb(void *contents, size_t size, size_t nmemb, void *userp) {
-    size_t realsize = size *nmemb;
-    struct http_response_buff_t *mem = (struct http_response_buff_t *) userp;
-
-    mem->memory = (char *) realloc(mem->memory, mem->size + realsize + 1);
-    if(mem->memory == NULL) {
-      /* out of memory! */ 
-      printf("not enough memory (realloc returned NULL)\n");
-      return 0;
-    }
-   
-    memcpy(&(mem->memory[mem->size]), contents, realsize);
-    mem->size += realsize;
-    mem->memory[mem->size] = 0;
-    return realsize;
-  }
 
   void app_t::send_registration_email(const std::string &email, const std::string &secret) {
     string username;
@@ -156,16 +134,6 @@ namespace hoc {
 
     // send an http request to get a new 
     // access token to send email with
-    CURL *curl;
-    CURLcode res;
-    curl_global_init(CURL_GLOBAL_ALL);
-    curl = curl_easy_init();
-
-    if (!curl) {
-      curl_global_cleanup();
-      throw runtime_error("curl init failed");
-      return;
-    }
 
     std::string get_token_url("https://www.googleapis.com/oauth2/v4/token");
     std::string get_token_args("client_id=");
@@ -175,30 +143,21 @@ namespace hoc {
       .append("&refresh_token=").append(db_res[0][0].data())
       .append("&grant_type=refresh_token");
 
-    struct http_response_buff_t chunk;
-    chunk.memory = (char *) malloc(1); 
-    chunk.size = 0;
+    request_t get_token_request;
+    get_token_request.set_url(get_token_url.c_str());
+    get_token_request.add_header("Expect:");
+    get_token_request.add_header("Transfer-Encoding: chunked");
+    string get_token_response;
 
-    curl_easy_setopt(curl, CURLOPT_URL, get_token_url.c_str());
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, get_token_args.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_http_response_cb);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &chunk);
-    res = curl_easy_perform(curl);
+    get_token_request.on_data([&get_token_response](const char* data, size_t len) {
+      get_token_response.append(string{ data, len });
+    });
 
-    if (res != CURLE_OK) {
-      curl_easy_cleanup(curl);
-      curl_global_cleanup();
-      throw runtime_error("curl post request failed");
-      return;
-    }
-
-    auto json = dj::json_t::from_string(chunk.memory);
+    get_token_request.send(get_token_args);
+    auto json = dj::json_t::from_string(get_token_response.c_str());
 
     if (!json.contains("access_token")) {
-      curl_easy_cleanup(curl);
-      curl_global_cleanup();
       throw runtime_error("could not get access token");
-      return;
     }
 
     auto transport = mail::get_transporter(
@@ -207,8 +166,5 @@ namespace hoc {
     );
 
     mail::send_message(msg, transport);
-    curl_easy_cleanup(curl);
-    free(chunk.memory);
-    curl_global_cleanup();
   }
 }

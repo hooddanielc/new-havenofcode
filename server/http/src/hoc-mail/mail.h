@@ -10,6 +10,7 @@
 #include <curl/curl.h>
 
 #include <hoc/app.h>
+#include <hoc/request.h>
 #include <hoc-db/db.h>
 
 namespace hoc {

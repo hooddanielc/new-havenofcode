@@ -13,21 +13,41 @@ namespace hoc {
     routes.push_back(unique_ptr<route_t<req_t>>(new set_noreply_token_callback_route_t<req_t>()));
   }
 
-  void route_request(const req_t &req) {
-    for (auto &route : routes) {
-      auto match = route->match(req.uri().c_str());
+  void end_server_error(const req_t &req, const string &message) {
+    req.set_status(500);
+    auto json = dj::json_t::empty_object;
+    json["error"] = true;
+    json["message"] = message;
+    string out(json.to_string());
+    req.set_content_length(out.size());
+    req.send_body(out);
+  }
 
-      if (match.pass == true) {
-        if (req.method() == "GET") {
-          route->get(req, match);
-        } else if (req.method() == "POST") {
-          route->post(req, match);
-        } else if (req.method() == "PUT") {
-          route->put(req, match);
-        } else if (req.method() == "DELETE") {
-          route->del(req, match);
+  void route_request(const req_t &req) {
+    try {
+      for (auto &route : routes) {
+        auto match = route->match(req.uri().c_str());
+
+        if (match.pass == true) {
+          if (req.method() == "GET") {
+            route->get(req, match);
+          } else if (req.method() == "POST") {
+            route->post(req, match);
+          } else if (req.method() == "PUT") {
+            route->put(req, match);
+          } else if (req.method() == "DELETE") {
+            route->del(req, match);
+          }
         }
       }
+    } catch (runtime_error e) {
+      end_server_error(req, e.what());
+    } catch (logic_error e) {
+      end_server_error(req, e.what());
+    } catch (exception e) {
+      end_server_error(req, e.what());
+    } catch (...) {
+      end_server_error(req, "something terrible happened");
     }
   }
 }
