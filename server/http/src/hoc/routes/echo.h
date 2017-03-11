@@ -21,7 +21,6 @@ namespace hoc {
         str->append("\n\n");
 
         req.on_data([str](const string &data) {
-          cout << "GOT SOME DATA" << endl;
           str->append(data);
         });
 

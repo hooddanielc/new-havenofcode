@@ -53,6 +53,7 @@ static void ngx_http_sample_put_handler(ngx_http_request_t *r) {
     unsigned char data[4096];
 
     while ((ret = ngx_read_file(&current_request->request_body->temp_file->file, data, 4096, offset)) > 0) {
+      cout << "Got a file" << endl;
       // if (write(fd, data, ret) < 0) {
       //   ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to allocate response buffer.");
       //   ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);

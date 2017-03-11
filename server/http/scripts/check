@@ -1,6 +1,8 @@
 TMP=$(pwd)
 cd /root/src
+stop-http
 set -e
+start-http
 
 for file in /root/src/**/*-test.cc
 do
@@ -16,5 +18,7 @@ do
   rel=$(realpath --relative-to="/root/src" "$filename")
   ../out/debug/$rel
 done
+
+stop-http
 
 cd $TMP
