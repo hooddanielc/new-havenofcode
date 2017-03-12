@@ -17,36 +17,6 @@ namespace hoc {
     public:
       register_route_t() : route_t<T>("/api/register") {}
 
-      void post_end_invalid_json(const T &req) const {
-        req.set_status(400);
-        auto json = dj::json_t::empty_object;
-        json["error"] = true;
-        json["message"] = "invalid json";
-        string out(json.to_string());
-        req.set_content_length(out.size());
-        req.send_body(out);
-      }
-
-      void post_end_invalid_user_json(const T &req) const {
-        req.set_status(400);
-        auto json = dj::json_t::empty_object;
-        json["error"] = true;
-        json["message"] = "user active";
-        string out(json.to_string());
-        req.set_content_length(out.size());
-        req.send_body(out);
-      }
-
-      void post_end_critical_error(const T &req) const {
-        req.set_status(500);
-        auto json = dj::json_t::empty_object;
-        json["error"] = true;
-        json["message"] = "database error";
-        string out(json.to_string());
-        req.set_content_length(out.size());
-        req.send_body(out);
-      }
-
       bool user_active(const string &email, db_t &db) {
         auto active_user = db.exec(
           "SELECT id FROM \"user\" WHERE email = $1 AND active = $2",
@@ -136,13 +106,17 @@ namespace hoc {
           string email;
           string password;
 
-          json = dj::json_t::from_string((*str).c_str());
-          email = json["user"]["email"].as<string>();
-          password = json["user"]["password"].as<string>();
-          delete str;
+          try {
+            json = dj::json_t::from_string((*str).c_str());
+            email = json["user"]["email"].as<string>();
+            password = json["user"]["password"].as<string>();
+            delete str;
+          } catch (const exception &e) {
+            return route_t<T>::fail_with_error(req, "invalid json");
+          }
 
           if (password == "null" || email == "null") {
-            return post_end_invalid_json(req);
+            return route_t<T>::fail_with_error(req, "username and password required");
           }
 
           db_t db;
@@ -150,21 +124,18 @@ namespace hoc {
 
           try {
             if (user_active(email, db) == true) {
-              return post_end_invalid_user_json(req);
+              return route_t<T>::fail_with_error(req, "user active");
             }
 
             int user_id = refresh_registration(email, db);
             db.exec("COMMIT");
 
             // done
-            req.set_status(200);
             auto json = dj::json_t::empty_object;
             json["user"] = dj::json_t::empty_object;
             json["user"]["email"] = email;
             json["user"]["id"] = user_id;
-            string out(json.to_string());
-            req.set_content_length(out.size());
-            req.send_body(out);
+            route_t<T>::send_json(req, json, 200);
           } catch (runtime_error e) {
             db.exec("ROLLBACK");
             throw e;

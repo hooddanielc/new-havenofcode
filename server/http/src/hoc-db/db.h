@@ -35,5 +35,8 @@ namespace hoc {
       db_result_t exec(const char *query);
     private:
       PGconn *conn;
+      db_t(db_t &) = delete;
+      db_t &operator=(db_t &&) = delete;
+      db_t &operator=(db_t &) = delete;
   };
 }

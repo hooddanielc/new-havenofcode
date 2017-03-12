@@ -24,10 +24,11 @@ namespace hoc {
 
       void gen_types();
 
-      // safety
-      db_type_info_t(){};
       db_type_info_t(db_type_info_t &&) = delete;
-      db_type_info_t(const db_type_info_t &) = delete;
+      db_type_info_t(db_type_info_t &) = delete;
+      db_type_info_t &operator=(db_type_info_t &&) = delete;
+      db_type_info_t &operator=(db_type_info_t &) = delete;
+      db_type_info_t() = default;
       ~db_type_info_t() = default;
   };
 }

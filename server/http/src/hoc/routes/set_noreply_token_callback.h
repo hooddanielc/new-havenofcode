@@ -21,27 +21,15 @@ class set_noreply_token_callback_route_t : public route_t<T> {
         std::string args = req.args();
 
         if (args.size() < 5) {
-          req.set_status(400);
-          string body("bad request");
-          req.set_content_length(body.size());
-          req.send_body(body);
-          return;
+          return route_t<T>::fail_with_error(req, "invalid arguments");
         }
 
         if (args == "error=access_denied") {
-          req.set_status(400);
-          string body("user failed to accept");
-          req.set_content_length(body.size());
-          req.send_body(body);
-          return;
+          return route_t<T>::fail_with_error(req, "user failed to accept");
         }
 
         if (args.substr(0, 5) != "code=") {
-          req.set_status(400);
-          string body("user failed to accept");
-          req.set_content_length(body.size());
-          req.send_body(body);
-          return;
+          return route_t<T>::fail_with_error(req, "code not provided");
         }
 
         string authorization_code = args.substr(5, args.size());
@@ -69,10 +57,7 @@ class set_noreply_token_callback_route_t : public route_t<T> {
         auto json = dj::json_t::from_string(token_response_data.c_str());
 
         if (!json.contains("refresh_token")) {
-          req.set_status(400);
-          auto body = json.to_string();
-          req.set_content_length(body.size());
-          req.send_body(body);
+          return route_t<T>::fail_with_error(req, "missing refresh token");
         } else {
           string get_profile_url("https://www.googleapis.com/plus/v1/people/me?");
           get_profile_url.append("access_token=").append(json["access_token"].as<string>());

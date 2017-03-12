@@ -19,5 +19,6 @@ namespace hoc {
       int row;
       PGresult *res;
       db_row_t(PGresult *res, int row) : row(row), res(res) {};
+      db_row_t &operator=(db_row_t &) = delete;
   };
 }

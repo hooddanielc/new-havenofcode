@@ -23,5 +23,6 @@ namespace hoc {
     private:
       PGresult *res;
       db_result_t(PGresult *res) : res(res) {};
+      db_result_t &operator=(db_result_t &) = delete;
   };
 }

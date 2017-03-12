@@ -110,7 +110,7 @@ namespace hoc {
       "Hi ").append(username).append(",\n\n"
       "Please click on the link below "
       "to verify your email and start living the dream.\n\n"
-      "http://www.havenofcode.com/complete_registration?secret="
+      "http://").append(app_t::get().host).append("/complete_registration?secret="
     );
 
     msg_str.append(secret).append(
