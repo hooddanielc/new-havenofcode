@@ -10,7 +10,7 @@ namespace hoc {
     public:
       echo_route_t() : route_t<T>("/api/echo") {}
 
-      void serve(const T &req) const {
+      void serve(T &req) {
         auto str = new string();
         str->append(req.request_line());
 
@@ -33,19 +33,19 @@ namespace hoc {
         });
       }
 
-      void get(const T &req, const url_match_result_t &) override {
+      void get(T &req, const url_match_result_t &) override {
         serve(req);
       }
 
-      void post(const T &req, const url_match_result_t &) override {
+      void post(T &req, const url_match_result_t &) override {
         serve(req);
       }
 
-      void put(const T &req, const url_match_result_t &) override {
+      void put(T &req, const url_match_result_t &) override {
         serve(req);
       }
 
-      void del(const T &req, const url_match_result_t &) override {
+      void del(T &req, const url_match_result_t &) override {
         serve(req);
       }
   };

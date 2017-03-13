@@ -38,19 +38,19 @@ namespace hoc {
       route_t(std::string pat) : pattern(pat) {}
 
     public:
-      virtual void get(const T &, const url_match_result_t &) {};
-      virtual void post(const T &, const url_match_result_t &) {};
-      virtual void put(const T &, const url_match_result_t &) {};
-      virtual void del(const T &, const url_match_result_t &) {};
+      virtual void get(T &, const url_match_result_t &) {};
+      virtual void post(T &, const url_match_result_t &) {};
+      virtual void put(T &, const url_match_result_t &) {};
+      virtual void del(T &, const url_match_result_t &) {};
 
-      void fail_with_error(const T &req, const std::string &msg) {
+      void fail_with_error(T &req, const std::string &msg) {
         auto json = dj::json_t::empty_object;
         json["error"] = true;
         json["message"] = msg;
         send_json(req, json, 400);
       }
 
-      void send_json(const T &req, const dj::json_t &json, int status) {
+      void send_json(T &req, const dj::json_t &json, int status) {
         req.set_status(status);
         auto out(json.to_string());
         req.set_content_length(out.size());

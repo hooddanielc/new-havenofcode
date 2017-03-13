@@ -69,14 +69,14 @@ namespace hoc {
     return *this;
   }
 
-  void app_t::emit_request(const req_t &request) {
+  void app_t::emit_request(req_t &request) {
     for (auto it = request_events.begin(); it < request_events.end(); ++it) {
       (*it)(request);
     }
   }
 
   template<typename T>
-  void app_t::emit_void(const T &list) {
+  void app_t::emit_void(T &list) {
     for (auto it = list.begin(); it < list.end(); ++it) {
       (*it)();
     }

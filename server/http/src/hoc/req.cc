@@ -4,11 +4,11 @@ using namespace std;
 
 namespace hoc {
 
-void req_t::on_data(const req_t::cb_data_t &fn) const {
+void req_t::on_data(const req_t::cb_data_t &fn) {
   data_events.push_back(fn);
 }
 
-void req_t::on_end(const req_t::cb_void_t &fn) const {
+void req_t::on_end(const req_t::cb_void_t &fn) {
   end_events.push_back(fn);
 } 
 

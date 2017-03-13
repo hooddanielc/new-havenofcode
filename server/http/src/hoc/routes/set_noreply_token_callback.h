@@ -15,7 +15,7 @@ class set_noreply_token_callback_route_t : public route_t<T> {
   public:
     set_noreply_token_callback_route_t() : route_t<T>("/api/set-noreply-callback") {}
 
-    void get(const T &req, const url_match_result_t &) override {
+    void get(T &req, const url_match_result_t &) override {
       req.on_end([&]() {
         req.send_header("Content-Type", "text/html");
         std::string args = req.args();
@@ -87,10 +87,12 @@ class set_noreply_token_callback_route_t : public route_t<T> {
 
             db_t db;
             db.exec("BEGIN");
+            string param(json["refresh_token"].as<string>());
+            vector<db_param_t> params({ param });
             db.exec(
               "UPDATE app_token SET refresh_token = $1 "
               "WHERE id = 'no_reply_email'",
-              vector<db_param_t>({ json["refresh_token"].as<string>() })
+              params
             );
             db.exec("END");
 

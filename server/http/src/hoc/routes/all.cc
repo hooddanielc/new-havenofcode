@@ -13,7 +13,7 @@ namespace hoc {
     routes.push_back(unique_ptr<route_t<req_t>>(new set_noreply_token_callback_route_t<req_t>()));
   }
 
-  void end_server_error(const req_t &req, const string &message) {
+  void end_server_error(req_t &req, const string &message) {
     req.set_status(500);
     auto json = dj::json_t::empty_object;
     json["error"] = true;
@@ -23,7 +23,7 @@ namespace hoc {
     req.send_body(out);
   }
 
-  void route_request(const req_t &req) {
+  void route_request(req_t &req) {
     try {
       for (auto &route : routes) {
         auto match = route->match(req.uri().c_str());

@@ -12,7 +12,7 @@ FIXTURE(initial_state) {
 FIXTURE(clear_event_state) {
   auto &app = app_t::get().clear();
 
-  app.on_request([](const req_t &) {});
+  app.on_request([](req_t &) {});
   app.on_start([]() {});
   app.on_exit([]() {});
 
@@ -34,7 +34,7 @@ FIXTURE(events_call_back) {
   int start_val = 0;
   int exit_val = 0;
 
-  app.on_request([&request_val](const req_t &) {
+  app.on_request([&request_val](req_t &) {
     request_val += 1;
   });
 
@@ -47,7 +47,8 @@ FIXTURE(events_call_back) {
   });
 
   req_t::header_list_t headers;
-  app.emit_request(req_t(headers));
+  req_t req(headers);
+  app.emit_request(req);
   app.emit_start();
   app.emit_exit();
 

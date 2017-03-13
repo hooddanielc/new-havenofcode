@@ -54,7 +54,7 @@ namespace hoc {
     return PQerrorMessage(conn);
   }
 
-  db_result_t db_t::exec(const char *query, const db_t::text_params_t &params) {
+  db_result_t db_t::exec(const char *query, db_t::text_params_t &params) {
     PGresult *res = PQexecParams(
       conn,
       query,
@@ -85,7 +85,7 @@ namespace hoc {
     }
   }
 
-  db_result_t db_t::exec(const char *query, const db_t::mixed_params_t &params) {
+  db_result_t db_t::exec(const char *query, db_t::mixed_params_t &params) {
     const int size = params.size();
     int formats[size];
     int lengths[size];

@@ -15,5 +15,5 @@
 
 namespace hoc {
   void assign_routes();
-  void route_request(const req_t &req);
+  void route_request(req_t &req);
 }

@@ -17,43 +17,47 @@ namespace hoc {
     public:
       register_route_t() : route_t<T>("/api/register") {}
 
-      bool user_active(const string &email, db_t &db) {
+      bool user_active(string &email, db_t &db) {
+        vector<db_param_t> params({
+          email,
+          true
+        });
+
         auto active_user = db.exec(
           "SELECT id FROM \"user\" WHERE email = $1 AND active = $2",
-          vector<db_param_t>({
-            email,
-            true
-          })
+          params
         );
 
         return active_user.rows() == 1;
       }
 
-      int get_user_id(const string &email, db_t &db) {
+      int get_user_id(string &email, db_t &db) {
+        vector<db_param_t> email_params({ email });
+
         auto user = db.exec(
           "SELECT id FROM \"user\" WHERE email = $1",
-          vector<db_param_t>({ email })
+          email_params
         );
 
         if (user.rows() == 0) {
           return db.exec(
             "INSERT INTO \"user\" (email) VALUES ($1) RETURNING id",
-            vector<db_param_t>({ email })
+            email_params
           )[0][0].int_val();
         } else {
           // delete old registrations
+          vector<db_param_t> user_id_params({ db_param_t(user[0][0].int_val()) });
+
           db.exec(
             "UPDATE registration SET deleted = 'TRUE' WHERE \"user\" = $1",
-            vector<db_param_t>({
-              user[0][0].int_val()
-            })
+            user_id_params
           );
         }
 
         return user[0][0].int_val();
       }
 
-      int refresh_registration(const string &email, db_t &db) {
+      int refresh_registration(string &email, db_t &db) {
         int user = get_user_id(email, db);
 
         // insert a new registration with private key
@@ -74,16 +78,21 @@ namespace hoc {
 
         // insert private key into database
         // along with the secret message
+        string a(pri.get_k1().get_str());
+        string b(string(pri.get_k2().get_str()));
+        string c(string(secret_message.get_str()));
+        auto params = vector<db_param_t>({
+          db_param_t(user),
+          db_param_t(a),
+          db_param_t(b),
+          db_param_t(c)
+        });
+
         auto id = db.exec(
           "INSERT INTO registration (\"user\", \"rsaPubD\", \"rsaPubN\", \"secret\")"
           "VALUES ($1, $2, $3, $4)"
           "RETURNING user",
-          vector<db_param_t>({
-            user,
-            string(pri.get_k1().get_str()),
-            string(pri.get_k2().get_str()),
-            string(secret_message.get_str())
-          })
+          params
         );
 
         // send an email to the user at the email address
@@ -92,8 +101,7 @@ namespace hoc {
         return user;
       }
 
-      void post(const T &req, const url_match_result_t &) override {
-        app_t &app = app_t::get();
+      void post(T &req, const url_match_result_t &) override {
         auto str = new string("");
 
         req.on_data([str](const std::string &data) mutable {

@@ -88,7 +88,7 @@ set_custom_header_in_headers_out(ngx_http_request_t *, ngx_str_t *key, ngx_str_t
   h->hash = 1;
 }
 
-void req_t::send_body(const string &body) const {
+void req_t::send_body(const string &body) {
   const std::string::size_type size = body.size();
   u_char *data = new u_char[size];
   memcpy(data, body.c_str(), size);
@@ -103,7 +103,7 @@ void req_t::send_body(const string &body) const {
   b->last_buf = 1;
 }
 
-void req_t::send_header(const string &key, const string &val) const {
+void req_t::send_header(const string &key, const string &val) {
   if (key == "Content-Type") {
     // the content type is straight forward
     const std::string::size_type size = val.size();
@@ -137,50 +137,50 @@ void req_t::send_header(const string &key, const string &val) const {
   }
 }
 
-void req_t::set_status(int status) const {
+void req_t::set_status(int status) {
   current_request->headers_out.status = status;
 }
 
-void req_t::set_content_length(int len) const {
+void req_t::set_content_length(int len) {
   current_request->headers_out.content_length_n = len;
 }
 
-string req_t::uri() const {
+string req_t::uri() {
   return string{
     reinterpret_cast<char*>(current_request->uri.data),
     static_cast<long unsigned int>(current_request->uri.len)
   };
 }
 
-string req_t::args() const {
+string req_t::args() {
   return string{
     reinterpret_cast<char*>(current_request->args.data),
     static_cast<long unsigned int>(current_request->args.len)
   };
 }
 
-string req_t::request_line() const {
+string req_t::request_line() {
   return string{
     reinterpret_cast<char*>(current_request->request_line.data),
     static_cast<long unsigned int>(current_request->request_line.len)
   };
 }
 
-string req_t::exten() const {
+string req_t::exten() {
   return string{
     reinterpret_cast<char*>(current_request->exten.data),
     static_cast<long unsigned int>(current_request->exten.len)
   };
 }
 
-string req_t::unparsed_uri() const {
+string req_t::unparsed_uri() {
   return string{
     reinterpret_cast<char*>(current_request->unparsed_uri.data),
     static_cast<long unsigned int>(current_request->unparsed_uri.len)
   };
 }
 
-string req_t::method() const {
+string req_t::method() {
   return string{
     reinterpret_cast<char*>(current_request->method_name.data),
     static_cast<long unsigned int>(current_request->method_name.len)

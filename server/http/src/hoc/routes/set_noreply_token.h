@@ -12,7 +12,7 @@ namespace hoc {
     public:
       set_noreply_token_route_t() : route_t<T>("/api/set-noreply-token") {}
 
-      void get(const T &req, const url_match_result_t &) override {
+      void get(T &req, const url_match_result_t &) override {
         req.on_end([&]() {
           string redirect_uri("https://accounts.google.com/o/oauth2/v2/auth?");
 

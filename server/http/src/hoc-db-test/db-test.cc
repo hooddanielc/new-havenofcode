@@ -121,17 +121,17 @@ FIXTURE(db_does_mixed_params) {
   db.exec("DELETE FROM article WHERE id > 0");
   db.exec("END");
 
-  const char *email = "user@user.com";
-  const char *title = "asdf";
-  const char *description = "1234";
-  const char *md = "entire article";
+  string email("user@user.com");
+  string title("asdf");
+  string description("1234");
+  string md("entire article");
 
-  vector<const char *> user_params({ email });
+  vector<const char *> user_params({ email.c_str() });
 
   vector<db_param_t> article_insert_params({
-    string(title),
-    string(description),
-    string(md)
+    email,
+    title,
+    md
   });
 
   // insert user
@@ -152,15 +152,20 @@ FIXTURE(db_does_mixed_params) {
 
   // select user using id
   db.exec("BEGIN");
-  auto user_res_two = db.exec("SELECT * FROM \"user\" WHERE id = $1", vector<db_param_t>({
-    user_res[0][0].int_val()
-  }));
+  int user_id = user_res[0][0].int_val();
+  vector<db_param_t> params({ db_param_t(user_id) });
+  auto user_res_two = db.exec(
+    "SELECT * FROM \"user\" WHERE id = $1",
+    params
+  );
   db.exec("END");
 
   // select article using title
-  auto article_res = db.exec("SELECT id FROM article WHERE title = $1", vector<db_param_t>({
-    string(title)
-  }));
+  vector<db_param_t> article_params({ title });
+  auto article_res = db.exec(
+    "SELECT id FROM article WHERE title = $1",
+    article_params
+  );
 
   EXPECT_EQ(user_res[0][0].int_val(), user_res_two[0][0].int_val());
 }
@@ -170,21 +175,37 @@ FIXTURE(db_does_joins) {
   db_t db;
 
   // insert user
+  string email("email@email.com");
+  vector<db_param_t> email_params({ email });
   db.exec("BEGIN");
   auto user = db.exec(
     "INSERT INTO \"user\" (email) VALUES ($1) RETURNING id",
-    vector<db_param_t>({ "email@email.com" })
+    email_params
   );
   db.exec("END");
 
   // insert article
   db.exec("BEGIN");
+  string title("asdf");
+  string description("asdf");
+  string md("md");
+  int user_id = user[0][0].int_val();
+
+  vector<db_param_t> article_params({
+    title, 
+    description,
+    md,
+    db_param_t(user_id)
+  });
+
   auto article = db.exec(
     "INSERT INTO article (title, description, md, \"user\") VALUES ($1, $2, $3, $4)"
     "RETURNING id",
-    vector<db_param_t>({ "asdf", "description", "md", user[0][0].int_val() })
+    article_params
   );
   db.exec("END");
+
+  vector<db_param_t> joined_params({ db_param_t(user_id)});
 
   db.exec("BEGIN");
   auto joined = db.exec(
@@ -193,7 +214,7 @@ FIXTURE(db_does_joins) {
     "INNER JOIN \"user\" C "
     "ON C.id = P.user "
     "WHERE C.id = $1",
-    vector<db_param_t>({ user[0][0].int_val() })
+    joined_params
   );
   db.exec("END");
 

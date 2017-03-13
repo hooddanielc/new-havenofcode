@@ -10,7 +10,7 @@ void hoc::app_t::main() {
     assign_routes();
   });
 
-  app.on_request([](const req_t &req) {
+  app.on_request([](req_t &req) {
     route_request(req);
   });
 }

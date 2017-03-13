@@ -10,7 +10,7 @@ namespace hoc {
     public:
       login_route_t() : route_t<T>("/api/login") {}
 
-      void get(const T &req, const url_match_result_t &) override {
+      void get(T &req, const url_match_result_t &) override {
         app_t &app = app_t::get();
 
         req.on_end([&req, &app]() {

@@ -84,10 +84,9 @@ FIXTURE(user_already_registered) {
   refresh_db();
   db_t db;
   db.exec("BEGIN");
-  db.exec("INSERT INTO \"user\" (email, active) VALUES ($1, $2)", vector<db_param_t>({
-    "test@test.com",
-    true
-  }));
+  string email("test@test.com");
+  vector<db_param_t> insert_user_params({ email, true });
+  db.exec("INSERT INTO \"user\" (email, active) VALUES ($1, $2)", insert_user_params);
   db.exec("END");
 
   auto json = dj::json_t::from_string("{\"user\": {}}");
@@ -105,25 +104,29 @@ FIXTURE(deletes_pending_registration) {
   refresh_db();
   db_t db;
   db.exec("BEGIN");
+  string email("hood.danielc@gmail.com");
+  vector<db_param_t> insert_user_params({ email });
 
   auto user = db.exec(
     "INSERT INTO \"user\" (email) VALUES ($1)"
     "RETURNING id",
-    vector<db_param_t>({
-      "hood.danielc@gmail.com"
-    })
+    insert_user_params
   );
+
+  int user_id = user[0][0].int_val();
+  string asdf("asdf");
+  vector<db_param_t> insert_registration_params({
+    db_param_t(user_id),
+    asdf,
+    asdf,
+    asdf
+  });
 
   auto to_delete = db.exec(
     "INSERT INTO registration (\"user\", \"rsaPubD\", \"rsaPubN\", \"secret\")"
     "VALUES ($1, $2, $3, $4)"
     "RETURNING id",
-    vector<db_param_t>({
-      user[0][0].int_val(),
-      "asdf",
-      "asdf",
-      "asdf"
-    })
+    insert_registration_params
   );
 
   db.exec("END");
@@ -136,14 +139,18 @@ FIXTURE(deletes_pending_registration) {
   fixture.end_func();
 
   db.exec("BEGIN");
+  int delete_id = to_delete[0][0].int_val();
+  vector<db_param_t> delete_user_params({ db_param_t(delete_id) });
   auto deleted = db.exec(
     "SELECT deleted FROM registration WHERE id = $1",
-    vector<db_param_t>({ to_delete[0][0].int_val() })
+    delete_user_params
   );
+  int non_delete_id = user[0][0].int_val();
+  vector<db_param_t> non_deleted_params({ db_param_t(non_delete_id), db_param_t(false) });
   auto nondeleted = db.exec(
     "SELECT deleted, \"rsaPubD\", \"rsaPubN\", secret "
     "FROM registration WHERE \"user\" = $1 AND deleted = $2",
-    vector<db_param_t>({ user[0][0].int_val(), false })
+    non_deleted_params
   );
   db.exec("END");
 

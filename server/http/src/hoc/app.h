@@ -12,7 +12,7 @@
 
 namespace hoc {
 
-using cb_request_t = std::function<void(const req_t &request)>;
+using cb_request_t = std::function<void(req_t &request)>;
 using cb_void_t = std::function<void()>;
 
 using cb_request_list_t = std::vector<cb_request_t>;
@@ -31,7 +31,7 @@ class app_t final {
     void on_start(const cb_void_t &fn);
     void on_exit(const cb_void_t &fn);
 
-    void emit_request(const req_t &request);
+    void emit_request(req_t &request);
     void emit_start();
     void emit_exit();
     void log(const std::string &str);
@@ -64,18 +64,18 @@ class app_t final {
     cb_void_list_t exit_events;
 
     template<typename T>
-    void emit_void(const T &list);
+    void emit_void(T &list);
 
     app_t():
-        status(200),
-        host(std::getenv("HOC_DOMAIN")),
-        db_name(std::getenv("HOC_DB_NAME")),
-        db_user(std::getenv("HOC_DB_USER")),
-        db_pass(std::getenv("HOC_DB_PASSWORD")),
-        db_host(std::getenv("HOC_DB_HOST")),
-        google_api_client_id(std::getenv("HOC_GOOGLE_API_CLIENT_ID")),
-        google_api_client_secret(std::getenv("HOC_GOOGLE_API_CLIENT_SECRET")),
-        no_reply_email(std::getenv("HOC_NOREPLY_EMAIL")) {};
+      status(200),
+      host(std::getenv("HOC_DOMAIN")),
+      db_name(std::getenv("HOC_DB_NAME")),
+      db_user(std::getenv("HOC_DB_USER")),
+      db_pass(std::getenv("HOC_DB_PASSWORD")),
+      db_host(std::getenv("HOC_DB_HOST")),
+      google_api_client_id(std::getenv("HOC_GOOGLE_API_CLIENT_ID")),
+      google_api_client_secret(std::getenv("HOC_GOOGLE_API_CLIENT_SECRET")),
+      no_reply_email(std::getenv("HOC_NOREPLY_EMAIL")) {};
 
     app_t(app_t &&) = delete;
     app_t(const app_t &) = delete;

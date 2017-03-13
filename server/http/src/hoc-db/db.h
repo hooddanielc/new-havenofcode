@@ -30,8 +30,8 @@ namespace hoc {
       const char *status();
       const char *last_error();
       bool connected();
-      db_result_t exec(const char *query, const text_params_t &params);
-      db_result_t exec(const char *query, const mixed_params_t &params);
+      db_result_t exec(const char *query, text_params_t &params);
+      db_result_t exec(const char *query, mixed_params_t &params);
       db_result_t exec(const char *query);
     private:
       PGconn *conn;

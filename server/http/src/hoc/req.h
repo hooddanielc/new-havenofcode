@@ -20,21 +20,25 @@ public:
     const header_list_t &request_headers
   ): request_headers(request_headers) {};
 
-  void on_data(const cb_data_t &fn) const;
-  void on_end(const cb_void_t &fn) const;
+  void on_data(const cb_data_t &fn);
+  void on_end(const cb_void_t &fn);
   void emit_data(const std::string &data);
   void emit_end();
-  void set_content_length(int len) const;
-  void send_header(const std::string &key, const std::string &val) const;
-  void send_body(const std::string &data) const;
-  void set_status(int status) const;
-  std::string uri() const;
-  std::string method() const;
-  std::string args() const;
-  std::string request_line() const;
-  std::string exten() const;
-  std::string unparsed_uri() const;
+  void set_content_length(int len);
+  void send_header(const std::string &key, const std::string &val);
+  void send_body(const std::string &data);
+  void set_status(int status);
+  std::string uri();
+  std::string method();
+  std::string args();
+  std::string request_line();
+  std::string exten();
+  std::string unparsed_uri();
   mutable header_list_t request_headers;
+
+  // delete copy
+  req_t(const req_t &) = delete;
+  req_t &operator=(const req_t &) = delete;
 
 private:
 
