@@ -17,12 +17,6 @@ RUN apt install -y build-essential
 RUN apt install -y libpcre3 libpcre3-dev
 RUN apt install -y zlib1g zlib1g-dev
 RUN apt install -y libssl-dev
-RUN cd ~ && wget http://nginx.org/download/nginx-1.10.2.tar.gz
-RUN cd ~ && tar -xvf nginx-1.10.2.tar.gz
-ADD ./ngx-loadable-cpp-module /root/ngx-loadable-cpp-module
-RUN cd ~/nginx-1.10.2 && ./configure --with-http_ssl_module --add-module=/root/ngx-loadable-cpp-module
-RUN cd ~/nginx-1.10.2 && make -j$(grep -c ^processor /proc/cpuinfo) && make install
-RUN rm ~/nginx-1.10.2.tar.gz
 
 # install gmp for cryptography
 RUN apt install -y libgmp-dev
@@ -46,6 +40,14 @@ RUN apt install -y libcurl4-gnutls-dev
 
 RUN cd /opt/vmime && make -j$(grep -c ^processor /proc/cpuinfo)
 RUN cd /opt/vmime && make install
+
+# build nginx module
+RUN cd ~ && wget http://nginx.org/download/nginx-1.10.2.tar.gz
+RUN cd ~ && tar -xvf nginx-1.10.2.tar.gz
+ADD ./ngx-loadable-cpp-module /root/ngx-loadable-cpp-module
+RUN cd ~/nginx-1.10.2 && ./configure --with-http_ssl_module --add-module=/root/ngx-loadable-cpp-module
+RUN cd ~/nginx-1.10.2 && make -j$(grep -c ^processor /proc/cpuinfo) && make install
+RUN rm ~/nginx-1.10.2.tar.gz
 
 # setup
 RUN echo 'cd $HOME' >> $HOME/.zshrc

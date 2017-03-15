@@ -10,7 +10,7 @@
 #include <cctype>
 #include <locale>
 #include <postgresql/libpq-fe.h>
-#include <hoc/app.h>
+#include <hoc/env.h>
 #include <hoc-db/db_result.h>
 #include <hoc-db/db_param.h>
 

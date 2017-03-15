@@ -121,19 +121,19 @@ namespace hoc {
   }
 
   const char *db_t::host() {
-    return app_t::get().db_host;
+    return env_t::get().db_host;
   }
 
   const char *db_t::user() {
-    return app_t::get().db_user;
+    return env_t::get().db_user;
   }
 
   const char *db_t::dbname() {
-    return app_t::get().db_name;
+    return env_t::get().db_name;
   }
 
   const char *db_t::password() {
-    return app_t::get().db_pass;
+    return env_t::get().db_pass;
   }
 
   string db_t::con_str() {

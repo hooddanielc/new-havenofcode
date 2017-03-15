@@ -3,6 +3,10 @@
 #include <vector>
 #include <string>
 
+// undefine nginx conflicting
+// macros
+#undef CRLF
+
 #include <vmime/vmime.hpp>
 #include <vmime/security/sasl/XOAuth2SASLMechanism.hpp>
 #include <vmime/security/sasl/XOAuth2SASLAuthenticator.hpp>

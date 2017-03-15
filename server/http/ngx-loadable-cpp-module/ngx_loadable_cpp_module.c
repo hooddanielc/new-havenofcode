@@ -4,7 +4,8 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
-typedef char *(*ngx_hoc_interface_init_t)(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+typedef char *(*ngx_hoc_interface_init_t)(ngx_conf_t *cf, ngx_command_t *cmd, void *conf, ngx_module_t module);
+ngx_module_t ngx_loadable_cpp_module;
 
 static char *ngx_hoc_init(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
   // Load the dynamic library
@@ -35,7 +36,7 @@ static char *ngx_hoc_init(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
     return NGX_CONF_ERROR;
   }
 
-  return ngx_hoc_interface_init(cf, cmd, conf);
+  return ngx_hoc_interface_init(cf, cmd, conf, ngx_loadable_cpp_module);
 }
 
 /* The module context. */

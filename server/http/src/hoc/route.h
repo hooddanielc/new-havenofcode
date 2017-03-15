@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include <functional>
-#include <hoc/app.h>
 #include <hoc/json.h>
 
 namespace hoc {
