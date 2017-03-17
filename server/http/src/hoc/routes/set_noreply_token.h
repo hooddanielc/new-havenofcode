@@ -4,8 +4,6 @@
 #include <hoc/route.h>
 #include <hoc/app.h>
 
-using namespace std;
-
 namespace hoc {
   template<typename T>
   class set_noreply_token_route_t : public route_t<T> {
@@ -14,7 +12,7 @@ namespace hoc {
 
       void get(T &req, const url_match_result_t &) override {
         req.on_end([&]() {
-          string redirect_uri("https://accounts.google.com/o/oauth2/v2/auth?");
+          std::string redirect_uri("https://accounts.google.com/o/oauth2/v2/auth?");
 
           redirect_uri
             .append("redirect_uri=http%3A%2F%2F").append(url_encode(app_t::get().host)).append("%2Fapi%2Fset-noreply-callback&")

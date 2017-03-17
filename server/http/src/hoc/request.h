@@ -31,7 +31,6 @@ namespace hoc {
       // hold curl c stuff
       CURL *curl;
       struct curl_slist *slist_headers;
-      CURLcode res;
 
       struct write_t {
         const char *readptr;

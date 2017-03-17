@@ -87,12 +87,7 @@ namespace mail {
     tr->disconnect();
   }
 
-} // mail
-} // hoc
-
-namespace hoc {
-
-  void app_t::send_registration_email(const std::string &email, const std::string &secret) {
+  void send_registration_email(const std::string &email, const std::string hash) {
     string username;
 
     for (size_t i = 0; i < email.size(); ++i) {
@@ -110,17 +105,17 @@ namespace hoc {
       "Hi ").append(username).append(",\n\n"
       "Please click on the link below "
       "to verify your email and start living the dream.\n\n"
-      "http://").append(app_t::get().host).append("/complete_registration?secret="
+      "http://").append(env_t::get().host).append("/confirm-email/"
     );
 
-    msg_str.append(secret).append(
+    msg_str.append(hash).append(
       "\n\n"
       "Sincerely,\n"
       "The Haven of Code Team"
     );
 
     auto msg = mail::get_message(
-      no_reply_email,
+      env_t::get().no_reply_email,
       vector<string>({ email }),
       vector<string>(),
       "Welcome Aboard",
@@ -138,8 +133,8 @@ namespace hoc {
     std::string get_token_url("https://www.googleapis.com/oauth2/v4/token");
     std::string get_token_args("client_id=");
 
-    get_token_args.append(app_t::get().google_api_client_id)
-      .append("&client_secret=").append(app_t::get().google_api_client_secret)
+    get_token_args.append(env_t::get().google_api_client_id)
+      .append("&client_secret=").append(env_t::get().google_api_client_secret)
       .append("&refresh_token=").append(db_res[0][0].data())
       .append("&grant_type=refresh_token");
 
@@ -161,10 +156,12 @@ namespace hoc {
     }
 
     auto transport = mail::get_transporter(
-      no_reply_email,
+      env_t::get().no_reply_email,
       json["access_token"].as<string>()
     );
 
     mail::send_message(msg, transport);
   }
-}
+
+} // mail
+} // hoc

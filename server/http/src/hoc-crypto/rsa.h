@@ -1,4 +1,4 @@
-// clang -Weverything -Wno-c++98-compat --std=c++14 -ocrypto crypto.cc -lstdc++ -lgmp -lm
+#pragma once
 
 #include <cmath>
 #include <cstring>
@@ -225,23 +225,23 @@ private:
 
 };  // prng_t
 
-std::istream &operator>>(std::istream &strm, big_t &big) {
+inline std::istream &operator>>(std::istream &strm, big_t &big) {
   big.read(strm);
   return strm;
 }
 
-std::ostream &operator<<(std::ostream &strm, const big_t &big) {
+inline std::ostream &operator<<(std::ostream &strm, const big_t &big) {
   big.write(strm);
   return strm;
 }
 
-big_t lcm(const big_t &a, const big_t &b) noexcept {
+inline big_t lcm(const big_t &a, const big_t &b) noexcept {
   big_t result;
   mpz_lcm(result.z, a.z, b.z);
   return result;
 }
 
-void open_ifstream(std::ifstream &strm, const std::string &path) {
+inline void open_ifstream(std::ifstream &strm, const std::string &path) {
   strm.open(path);
   if (!strm) {
     std::ostringstream msg;
@@ -251,27 +251,27 @@ void open_ifstream(std::ifstream &strm, const std::string &path) {
   strm.exceptions(std::ios::badbit | std::ios::failbit);
 }
 
-big_t powmod(const big_t &b, const big_t &e, const big_t &n) {
+inline big_t powmod(const big_t &b, const big_t &e, const big_t &n) {
   big_t result;
   mpz_powm(result.z, b.z, e.z, n.z);
   return result;
 }
 
-big_t random_prime(prng_t &prng, mp_bitcnt_t bits) {
+inline big_t random_prime(prng_t &prng, mp_bitcnt_t bits) {
   auto rnd = prng(bits);
   rnd.set_bit(bits - 1);
   return rnd.get_next_prime();
 }
 
-void swap(big_t &lhs, big_t &rhs) noexcept {
+inline void swap(big_t &lhs, big_t &rhs) noexcept {
   mpz_swap(lhs.z, rhs.z);
 }
 
-bool try_invert(big_t &out, const big_t &e, const big_t &n) noexcept {
+inline bool try_invert(big_t &out, const big_t &e, const big_t &n) noexcept {
   return mpz_invert(out.z, e.z, n.z) != 0;
 }
 
-big_t use_entropy(size_t size) {
+inline big_t use_entropy(size_t size) {
   auto *bytes = static_cast<char *>(alloca(size));
   {
     std::ifstream strm;
@@ -460,15 +460,15 @@ private:
 
 };  // key_t
 
-std::ostream &operator<<(std::ostream &strm, const key_t &key) {
+inline std::ostream &operator<<(std::ostream &strm, const key_t &key) {
   return strm << "{ exp: " << key.exp << ", mod: " << key.mod << " }";
 }
 
-mp_bitcnt_t get_min_bits(unsigned long e) {
+inline mp_bitcnt_t get_min_bits(unsigned long e) {
   return static_cast<mp_bitcnt_t>(ceil(log2(e))) * 2;
 }
 
-std::pair<key_t, key_t> make_pair(
+inline std::pair<key_t, key_t> make_pair(
     prng_t &prng, mp_bitcnt_t bits, unsigned long e) {
   bits = std::max(bits, get_min_bits(e));
   auto half_bits = bits / 2;
@@ -491,48 +491,3 @@ std::pair<key_t, key_t> make_pair(
 } // rsa
 } // crypto
 } // hoc
-
-/****************************************************
-
-// example program
-
-#include <iostream>
-
-using namespace hoc;
-using namespace crypto;
-
-int main(int, char *[]) {
-  // The number of bytes to read from /dev/urandom to seed the prng.
-  static const size_t entropy_size = 1024;
-  // The size of the keys.
-  static const mp_bitcnt_t bits = 2048;
-  // Make a key pair.
-  prng_t prng(use_entropy(entropy_size));
-  auto pair = rsa::make_pair(prng, bits);
-  const auto &pub = pair.first;
-  const auto &pvt = pair.second;
-  std::cout << "pub=" << pub << std::endl;
-  std::cout << "pvt=" << pvt << std::endl;
-  // Encrypt-decrypt a number.
-  const big_t m = 65;
-  auto c = pub(m);
-  auto u = pvt(c);
-  std::cout << "m=" << m << std::endl;
-  std::cout << "c=" << c << std::endl;
-  std::cout << "u=" << u << std::endl;
-  // Encrypt-decrypt a block of bytes.
-  auto *b1 = static_cast<char *>(alloca(pub.get_size() / 2));
-  strcpy(b1, "hello doctor name");
-  auto *b2 = static_cast<char *>(alloca(pub.get_size()));
-  pub.encrypt_block(b2, b1);
-  auto *b3 = static_cast<char *>(alloca(pub.get_size() / 2));
-  pvt.decrypt_block(b3, b2);
-  std::cout << std::quoted(b3) << std::endl;
-  // Encrypt-decrypt a string.
-  auto ciphertext = pub.encrypt(prng, "This is a test.");
-  auto plaintext = pvt.decrypt(ciphertext);
-  std::cout << std::quoted(plaintext) << std::endl;
-  return 0;
-}
-
-****************************************************/

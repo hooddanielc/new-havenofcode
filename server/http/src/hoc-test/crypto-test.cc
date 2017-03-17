@@ -98,6 +98,14 @@ FIXTURE(sha512) {
   );
 }
 
+FIXTURE(use_entropy) {
+  auto rnd = use_entropy(64);
+  ostringstream os;
+  os << rnd;
+  EXPECT_EQ(rnd.get_size(), 64);
+  EXPECT_EQ(os.str().size(), 154);
+}
+
 FIXTURE(rsa_test) {
   // The number of bytes to read from /dev/urandom to seed the prng.
   static const size_t entropy_size = 1024;

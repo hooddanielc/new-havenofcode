@@ -13,7 +13,7 @@
 #include <vmime/platforms/posix/posixHandler.hpp>
 #include <curl/curl.h>
 
-#include <hoc/app.h>
+#include <hoc/env.h>
 #include <hoc/request.h>
 #include <hoc-db/db.h>
 
@@ -47,5 +47,6 @@ namespace hoc {
     );
 
     void send_message(msg_t &msg, transport_t &tr);
+    void send_registration_email(const std::string &email, const std::string hash);
   }
 }

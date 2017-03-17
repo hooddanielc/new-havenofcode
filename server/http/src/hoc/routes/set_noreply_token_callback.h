@@ -7,8 +7,7 @@
 #include <hoc/request.h>
 #include <hoc-db/db.h>
 
-using namespace std;
-using namespace hoc;
+namespace hoc {
 
 template<typename T>
 class set_noreply_token_callback_route_t : public route_t<T> {
@@ -32,7 +31,7 @@ class set_noreply_token_callback_route_t : public route_t<T> {
           return route_t<T>::fail_with_error(req, "code not provided");
         }
 
-        string authorization_code = args.substr(5, args.size());
+        std::string authorization_code = args.substr(5, args.size());
         std::string get_token_url("https://www.googleapis.com/oauth2/v4/token");
         std::string get_token_args("code=");
 
@@ -47,10 +46,10 @@ class set_noreply_token_callback_route_t : public route_t<T> {
         get_token_request.set_url(get_token_url.c_str());
         get_token_request.add_header("Expect:");
         get_token_request.add_header("Transfer-Encoding: chunked");
-        string token_response_data;
+        std::string token_response_data;
 
         get_token_request.on_data([&token_response_data](const char *data, size_t len) {
-          token_response_data.append(string{ data, len });
+          token_response_data.append(std::string{ data, len });
         });
 
         get_token_request.send(get_token_args);
@@ -59,14 +58,14 @@ class set_noreply_token_callback_route_t : public route_t<T> {
         if (!json.contains("refresh_token")) {
           return route_t<T>::fail_with_error(req, "missing refresh token");
         } else {
-          string get_profile_url("https://www.googleapis.com/plus/v1/people/me?");
-          get_profile_url.append("access_token=").append(json["access_token"].as<string>());
+          std::string get_profile_url("https://www.googleapis.com/plus/v1/people/me?");
+          get_profile_url.append("access_token=").append(json["access_token"].as<std::string>());
           request_t get_profile_request;
           get_profile_request.set_url(get_profile_url.c_str());
-          string get_profile_response;
+          std::string get_profile_response;
 
           get_profile_request.on_data([&get_profile_response](const char *data, size_t len) {
-            get_profile_response.append(string{ data, len });
+            get_profile_response.append(std::string{ data, len });
           });
 
           get_profile_request.send();
@@ -76,10 +75,10 @@ class set_noreply_token_callback_route_t : public route_t<T> {
             !profile_json.contains("emails") ||
             profile_json["emails"].get_size() == 0 ||
             !profile_json["emails"][0].contains("value") ||
-            profile_json["emails"][0]["value"].as<string>() != app_t::get().no_reply_email
+            profile_json["emails"][0]["value"].as<std::string>() != app_t::get().no_reply_email
           ) {
             req.set_status(420);
-            string body("seriously?");
+            std::string body("seriously?");
             req.set_content_length(body.size());
             req.send_body(body);
           } else {
@@ -87,8 +86,8 @@ class set_noreply_token_callback_route_t : public route_t<T> {
 
             db_t db;
             db.exec("BEGIN");
-            string param(json["refresh_token"].as<string>());
-            vector<db_param_t> params({ param });
+            std::string param(json["refresh_token"].as<std::string>());
+            std::vector<db_param_t> params({ param });
             db.exec(
               "UPDATE app_token SET refresh_token = $1 "
               "WHERE id = 'no_reply_email'",
@@ -105,3 +104,5 @@ class set_noreply_token_callback_route_t : public route_t<T> {
       });
     }
 };
+
+} // hoc

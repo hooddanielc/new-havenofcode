@@ -25,15 +25,11 @@ module.exports = {
         references: { model: 'user', key: 'id' },
         allowNull: false
       },
-      rsaPubD: {
-        type: Sequelize.STRING,
-        allowNull: false
-      },
-      rsaPubN: {
-        type: Sequelize.STRING,
-        allowNull: false
-      },
       secret: {
+        type: Sequelize.STRING,
+        allowNull: false
+      },
+      password: {
         type: Sequelize.STRING,
         allowNull: false
       }

@@ -2,8 +2,6 @@
 
 #include <hoc/route.h>
 
-using namespace std;
-
 namespace hoc {
   template<typename T>
   class echo_route_t : public route_t<T> {
@@ -11,7 +9,7 @@ namespace hoc {
       echo_route_t() : route_t<T>("/api/echo") {}
 
       void serve(T &req) {
-        auto str = new string();
+        auto str = new std::string();
         str->append(req.request_line());
 
         for (auto it = req.request_headers.begin(); it != req.request_headers.end(); ++it) {
@@ -20,7 +18,7 @@ namespace hoc {
 
         str->append("\n\n");
 
-        req.on_data([str](const string &data) {
+        req.on_data([str](const std::string &data) {
           str->append(data);
         });
 

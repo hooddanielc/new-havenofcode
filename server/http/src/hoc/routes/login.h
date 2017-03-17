@@ -2,8 +2,6 @@
 
 #include <hoc/route.h>
 
-using namespace std;
-
 namespace hoc {
   template<typename T>
   class login_route_t : public route_t<T> {
@@ -15,7 +13,7 @@ namespace hoc {
 
         req.on_end([&req, &app]() {
           // set some known headers
-          string hello("<html>hello <a href=\"/there\">there</a>, how are you<html/>");
+          std::string hello("<html>hello <a href=\"/there\">there</a>, how are you<html/>");
           req.set_status(404);
           req.send_header("Content-Type", "text/html");
           req.set_content_length(hello.size());

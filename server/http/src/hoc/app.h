@@ -36,9 +36,6 @@ class app_t final {
     void emit_exit();
     void log(const std::string &str);
 
-    // defined in <hoc-mail/mail.cc>
-    void send_registration_email(const std::string &email, const std::string &secret);
-
     // defined in <hoc/main.cc>
     void main();
 
