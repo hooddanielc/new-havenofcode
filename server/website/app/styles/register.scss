@@ -23,8 +23,12 @@
     color: #3c763d;
   }
 
-  .glyphicon-remove {
+  .glyphicon-remove, .error {
     color: #a94442;
+  }
+
+  .error {
+    font-size: 1.5em;
   }
 
   .fa-spin {

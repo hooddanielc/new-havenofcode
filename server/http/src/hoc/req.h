@@ -4,6 +4,8 @@
 #include <string>
 #include <functional>
 #include <map>
+#include <iostream>
+#include <hoc/util.h>
 
 extern "C" {
   #include <ngx_config.h>
@@ -54,6 +56,7 @@ public:
   std::string exten();
   std::string unparsed_uri();
   header_list_t request_headers;
+  std::map<std::string, std::string> query();
 
   // delete copy
   req_t(const req_t &) = delete;

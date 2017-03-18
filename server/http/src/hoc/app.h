@@ -18,8 +18,6 @@ using cb_void_t = std::function<void()>;
 using cb_request_list_t = std::vector<cb_request_t>;
 using cb_void_list_t = std::vector<cb_void_t>;
 
-std::string url_encode(const std::string &str);
-
 class app_t final {
   public:
     static app_t &get() {

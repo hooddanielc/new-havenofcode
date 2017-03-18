@@ -98,7 +98,6 @@ namespace hoc {
         });
 
         req.on_end([&, str]() mutable {
-          req.send_header("Content-Type", "application/json");
           dj::json_t json;
           std::string email;
           std::string password;

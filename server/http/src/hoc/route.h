@@ -22,7 +22,7 @@ namespace hoc {
       url_match_result_t(std::vector<std::string> params) : pass(true), params(params) {}
       url_match_result_t() : pass(false) {}
       bool pass;
-      std::vector<std::string> params;
+      const std::vector<std::string> params;
   };
 
   template <typename T>

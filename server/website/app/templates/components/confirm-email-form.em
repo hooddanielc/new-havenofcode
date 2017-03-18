@@ -1,5 +1,3 @@
-h1.text-center Confirm Account
-
 .login-form-container
   unless success
     if failed
@@ -25,6 +23,8 @@ h1.text-center Confirm Account
           .form-group.text-center
             .fa.fa-circle-o-notch.fa-spin
   else
-    p Congratualations, registration successful.
+    .user-icon
+      span.glyphicon.glyphicon-user
+    p.text-center.success Congratualations, registration successful.
     link-to 'index'
       button.btn.btn-primary.btn-lg Continue

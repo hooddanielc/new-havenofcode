@@ -128,4 +128,25 @@ string req_t::method() {
   };
 }
 
+map<string, string> req_t::query() {
+  std::map<string, string> result;
+  vector<string> pairs;
+  split(args(), '&', pairs);
+
+  for (auto const &pair : pairs) {
+    vector<string> parts;
+    split(pair, '=', parts);
+
+    if (parts.size() == 2) {
+      result[url_decode(parts[0])] = url_decode(parts[1]);
+    } else if (parts.size() == 1) {
+      cout << "size is 1" << endl;
+      string empty_string;
+      result[url_decode(parts[0])] = empty_string;
+    }
+  }
+
+  return result;
+}
+
 } // hoc

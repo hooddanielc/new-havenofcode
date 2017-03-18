@@ -108,6 +108,8 @@ namespace hoc {
               db_param_t(user_id)
             });
 
+            // set user as active
+            db.exec("UPDATE \"user\" SET active = 'TRUE'");
             db.exec("COMMIT");
             db.exec("END TRANSACTION");
             auto success_json = dj::json_t::empty_object;
