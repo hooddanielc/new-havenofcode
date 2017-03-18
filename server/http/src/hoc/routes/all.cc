@@ -11,6 +11,7 @@ namespace hoc {
     routes.push_back(unique_ptr<route_t<req_t>>(new register_route_t<req_t>()));
     routes.push_back(unique_ptr<route_t<req_t>>(new set_noreply_token_route_t<req_t>()));
     routes.push_back(unique_ptr<route_t<req_t>>(new set_noreply_token_callback_route_t<req_t>()));
+    routes.push_back(unique_ptr<route_t<req_t>>(new confirm_registration_route_t<req_t>()));
   }
 
   void end_server_error(req_t &req, const string &message) {

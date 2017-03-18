@@ -14,6 +14,7 @@
 #include <curl/curl.h>
 
 #include <hoc/env.h>
+#include <hoc/app.h>
 #include <hoc/request.h>
 #include <hoc-db/db.h>
 

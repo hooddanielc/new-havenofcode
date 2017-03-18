@@ -12,6 +12,7 @@
 #include <hoc/routes/set_noreply_token.h>
 #include <hoc/routes/set_noreply_token_callback.h>
 #include <hoc/routes/echo.h>
+#include <hoc/routes/confirm_registration.h>
 
 namespace hoc {
   void assign_routes();

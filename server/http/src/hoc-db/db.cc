@@ -144,4 +144,12 @@ namespace hoc {
       .append(" password=").append(password())
       .append(" connect_timeout=10");
   }
+
+  string db_t::clean_literal(string str) {
+    return std::string(PQescapeLiteral(conn, str.c_str(), str.size()));
+  }
+
+  string db_t::clean_identifier(string str) {
+    return std::string(PQescapeIdentifier(conn, str.c_str(), str.size()));
+  }
 }

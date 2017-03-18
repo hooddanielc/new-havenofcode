@@ -108,7 +108,7 @@ namespace mail {
       "http://").append(env_t::get().host).append("/confirm-email/"
     );
 
-    msg_str.append(hash).append(
+    msg_str.append(hash).append("/").append(url_encode(email)).append(
       "\n\n"
       "Sincerely,\n"
       "The Haven of Code Team"

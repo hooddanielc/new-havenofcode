@@ -9,7 +9,7 @@ const Router = Ember.Router.extend({
 Router.map(function() {
   this.route('index', { path: '/' }, function () {
     this.route('register');
-    this.route('confirm-email', { path: '/confirm-email/:secret'});
+    this.route('confirm-email', { path: '/confirm-email/:secret/:email'});
   });
 });
 

@@ -33,6 +33,8 @@ namespace hoc {
       db_result_t exec(const char *query, text_params_t &params);
       db_result_t exec(const char *query, mixed_params_t &params);
       db_result_t exec(const char *query);
+      std::string clean_literal(std::string str);
+      std::string clean_identifier(std::string str);
     private:
       PGconn *conn;
       db_t(db_t &) = delete;
