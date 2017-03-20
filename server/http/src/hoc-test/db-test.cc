@@ -14,9 +14,17 @@ using namespace std;
 void refresh() {
   db_t db;
   db.exec("BEGIN");
-  db.exec("DELETE FROM registration WHERE id > 0");
-  db.exec("DELETE FROM article WHERE id > 0");
-  db.exec("DELETE FROM \"user\" WHERE id > 0");
+  db.exec("DELETE FROM session_ip_log WHERE id IS NOT NULL");
+  db.exec("DELETE FROM hoc_session WHERE id IS NOT NULL");
+  db.exec("DELETE FROM article WHERE id IS NOT NULL");
+  db.exec("DELETE FROM \"user\" WHERE id IS NOT NULL");
+
+  auto user = db.exec("SELECT 1 FROM pg_roles WHERE rolname='test@test.com'");
+
+  if (user.rows()) {
+    db.exec("REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM \"test@test.com\"");
+    db.exec("DROP USER IF EXISTS \"test@test.com\"");
+  }
   db.exec("END");
 }
 

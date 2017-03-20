@@ -4,6 +4,10 @@ using namespace std;
 
 namespace hoc {
 
+session_t<req_t> req_t::get_identity() {
+  return session_t<req_t>::make(*this);
+}
+
 void req_t::on_data(const req_t::cb_data_t &fn) {
   data_events.push_back(fn);
 }
@@ -140,9 +144,53 @@ map<string, string> req_t::query() {
     if (parts.size() == 2) {
       result[url_decode(parts[0])] = url_decode(parts[1]);
     } else if (parts.size() == 1) {
-      cout << "size is 1" << endl;
       string empty_string;
       result[url_decode(parts[0])] = empty_string;
+    }
+  }
+
+  return result;
+}
+
+// request_context->connection->fd
+std::string req_t::ip() {
+  socklen_t len;
+  struct sockaddr_storage addr;
+  char ipstr[INET6_ADDRSTRLEN];
+  getpeername(request_context->connection->fd, (struct sockaddr*) &addr, &len);
+
+  // deal with both IPv4 and IPv6:
+  if (addr.ss_family == AF_INET) {
+    struct sockaddr_in *s = (struct sockaddr_in *)&addr;
+    inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof ipstr);
+  } else { // AF_INET6
+    struct sockaddr_in6 *s = (struct sockaddr_in6 *)&addr;
+    inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof ipstr);
+  }
+
+  return string(ipstr);
+}
+
+map<string, vector<string>> req_t::cookies() {
+  map<string, vector<string>> result;
+
+  if (!request_headers.count("Cookie")) {
+    return result;
+  }
+
+  for (auto &cookie : request_headers["Cookie"]) {
+    std::vector<std::string> pairs;
+    split(cookie, ';', pairs);
+
+    for (auto &pair : pairs) {
+      std::vector<std::string> parts;
+      split(pair, '=', parts);
+
+      if (parts.size() == 2) {
+        result[parts[0]].push_back(parts[1]);
+      } else if (parts.size() == 1) {
+        result[parts[0]].push_back("");
+      }
     }
   }
 

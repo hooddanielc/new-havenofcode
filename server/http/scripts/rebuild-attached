@@ -1,0 +1,1 @@
+rebuild && stop-http && echo 'done building' && start-http-attached

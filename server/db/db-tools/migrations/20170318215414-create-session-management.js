@@ -2,7 +2,7 @@
 
 module.exports = {
   up: function (queryInterface, Sequelize) {
-    return queryInterface.createTable('session', {
+    return queryInterface.createTable('hoc_session', {
       id: {
         type: Sequelize.UUID,
         primaryKey: true,
@@ -23,7 +23,7 @@ module.exports = {
       user: {
         type: Sequelize.INTEGER,
         references: { model: 'user', key: 'id' },
-        allowNull: false
+        allowNull: true
       }
     }).then(() => {
       return queryInterface.createTable('session_ip_log', {
@@ -46,7 +46,7 @@ module.exports = {
         },
         session: {
           type: Sequelize.UUID,
-          references: { model: 'session', key: 'id' },
+          references: { model: 'hoc_session', key: 'id' },
           allowNull: false
         },
         ip: {
@@ -63,7 +63,7 @@ module.exports = {
 
   down: function (queryInterface, Sequelize) {
     return queryInterface.dropTable('session_id_log').then(() => {
-      return queryInterface.dropTable('session');
+      return queryInterface.dropTable('hoc_session');
     });
   }
 };

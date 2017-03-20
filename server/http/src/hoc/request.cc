@@ -29,6 +29,7 @@ request_t::request_t() {
 
   if (curl) {
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "");
   } else {
     throw runtime_error("curl_easy_init failed");
   }

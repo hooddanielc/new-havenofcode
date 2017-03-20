@@ -94,7 +94,11 @@ static ngx_int_t ngx_hoc_interface_on_http_request(ngx_http_request_t *r) {
         static_cast<long unsigned int>(h[i].value.len)
       };
 
-      request_headers[header_key] = header_value;
+      if (request_headers.count(header_key)) {
+        request_headers[header_key].push_back(header_value);
+      } else {
+        request_headers[header_key] = vector<string>({ header_value  });
+      }
     }
 
     // there are no more parts

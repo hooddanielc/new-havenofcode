@@ -37,8 +37,5 @@ namespace hoc {
       std::string clean_identifier(std::string str);
     private:
       PGconn *conn;
-      db_t(db_t &) = delete;
-      db_t &operator=(db_t &&) = delete;
-      db_t &operator=(db_t &) = delete;
   };
 }

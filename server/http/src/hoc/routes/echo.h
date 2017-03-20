@@ -13,7 +13,9 @@ namespace hoc {
         str->append(req.request_line());
 
         for (auto it = req.request_headers.begin(); it != req.request_headers.end(); ++it) {
-          str->append("\n").append(it->first).append(" ").append(it->second);
+          for (auto const &header_value : it->second) {
+            str->append("\n").append(it->first).append(" ").append(header_value);
+          }
         }
 
         str->append("\n\n");
@@ -23,6 +25,9 @@ namespace hoc {
         });
 
         req.on_end([&, str]() {
+          str->append("\n\n");
+          str->append("ip: ").append(req.ip());
+          req.get_identity();
           req.set_status(200);
           req.send_header("Content-Type", "text/html");
           req.set_content_length(str->size());

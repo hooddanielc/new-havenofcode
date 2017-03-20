@@ -12,8 +12,8 @@ namespace hoc {
     public:
       user_route_single_t() : route_t<T>("/api/user/:id") {}
 
-      void get(T &req, const url_match_result_t &match) {
-        req.on_end([&]()  {
+      void get(T &req, const url_match_result_t &) {
+        req.on_end([&]() {
           auto json = dj::json_t::empty_object;
           json["user"] = dj::json_t::empty_object;
           json["user"]["email"] = "something";
@@ -43,7 +43,7 @@ namespace hoc {
           params
         );
 
-        for (size_t i = 0; i < res.rows(); ++i) {
+        for (int i = 0; i < res.rows(); ++i) {
           auto user = dj::json_t::empty_object;
           user["id"] = res[i][0].int_val();
           user["email"] = res[i][1].data();
