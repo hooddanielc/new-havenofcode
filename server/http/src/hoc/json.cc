@@ -190,7 +190,7 @@ json_t json_t::from_string(std::string &&that) {
   istringstream strm(move(that));
   json_t result;
   strm >> result;
-  return move(result);
+  return result;
 }
 
 const char *json_t::get_kind_name(kind_t kind) noexcept {

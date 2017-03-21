@@ -6,6 +6,7 @@
 #include <stdexcept>
 
 #include <hoc/util.h>
+#include <hoc/route.h>
 #include <hoc-db/db.h>
 
 namespace hoc {
@@ -26,13 +27,75 @@ namespace hoc {
         return authenticated;
       }
 
+      void invalidate(T &req) {
+        std::string cookie = "session=";
+        cookie.append(id);
+        cookie.append("; Expires=Thu, 01 Jan 1970 00:00:00 GMT");
+        cookie.append("; Path=/");
+        req.send_header("Set-Cookie", cookie);
+
+        std::vector<db_param_t> params({
+          id
+        });
+
+        db.exec("BEGIN");
+        db.exec("UPDATE hoc_session SET deleted = 'TRUE' WHERE id = $1", params);
+        db.exec("END");
+      }
+
+      int authenticate(T &req, std::string &email, std::string &password) {
+        db_t db(email, password);
+        db.exec("BEGIN TRANSACTION");
+
+        std::vector<db_param_t> params({
+          email
+        });
+
+        auto user_result = db.exec(
+          "SELECT id FROM \"user\" WHERE email = $1",
+          params
+        );
+
+        if (!user_result.rows()) {
+          throw std::runtime_error("no user");
+        }
+
+        int user_id = user_result[0][0].int_val();
+
+        std::vector<db_param_t> update_session_params({
+          db_param_t(user_id),
+          id
+        });
+
+        db.exec(
+          "UPDATE hoc_session SET \"user\" = $1 WHERE id = $2",
+          update_session_params
+        );
+
+        std::string agent = req.user_agent();
+        std::string ip = req.ip();
+
+        std::vector<db_param_t> create_log_params({
+          db_param_t(id),
+          db_param_t(ip),
+          db_param_t(agent)
+        });
+
+        db.exec(
+          "INSERT INTO session_ip_log "
+          "(id, session, ip, \"userAgent\") "
+          "VALUES (uuid_generate_v4(), $1, $2, $3)",
+          create_log_params
+        );
+
+        db.exec("COMMIT");
+        db.exec("END TRANSACTION");
+        return user_id;
+      }
+
       static session_t<T> refresh_session(T &req, db_t &db) {
         std::string ip = req.ip();
-        string user_agent = "none";
-
-        if (req.request_headers.count("User-Agent") > 0) {
-          user_agent = req.request_headers["User-Agent"][0];
-        }
+        std::string user_agent = req.user_agent();
 
         auto create_session_result = db.exec(
           "INSERT INTO hoc_session (id) "
@@ -71,11 +134,7 @@ namespace hoc {
         db_t db;
         db.exec("BEGIN TRANSACTION");
         auto cookies = req.cookies();
-        std::string user_agent = "none";
-
-        if (req.request_headers.count("User-Agent") > 0) {
-          user_agent = req.request_headers["User-Agent"][0];
-        }
+        std::string user_agent = req.user_agent();
 
         if (cookies.count("session")) {
           if (cookies["session"].size() > 1) {
@@ -95,7 +154,7 @@ namespace hoc {
             "ON C.id = P.session "
             "INNER JOIN \"user\" U "
             "ON U.id = C.user "
-            "WHERE C.id = $1",
+            "WHERE C.id = $1 AND C.deleted = 'FALSE'",
             get_session_params
           );
 
@@ -107,7 +166,7 @@ namespace hoc {
               "FROM session_ip_log P "
               "INNER JOIN \"hoc_session\" C "
               "ON C.id = P.session "
-              "WHERE C.id = $1",
+              "WHERE C.id = $1 AND C.deleted = 'FALSE'",
               get_session_params
             );
 
@@ -132,10 +191,10 @@ namespace hoc {
                 std::string logged_ip = get_ip_logs_result[i][0].data();
 
                 if (logged_ip == ip) {
-                  string agent = get_ip_logs_result[i][1].data();
+                  std::string agent = get_ip_logs_result[i][1].data();
 
                   // found the ip, update session log
-                  string update_visit_id = get_ip_logs_result[i][2].data();
+                  std::string update_visit_id = get_ip_logs_result[i][2].data();
 
                   std::vector<db_param_t> update_ip_params({
                     update_visit_id
@@ -161,7 +220,7 @@ namespace hoc {
 
               // insert a new sessino ip
               if (user_agent_wrong) {
-                throw runtime_error("user agent");
+                throw std::runtime_error("user agent");
               } else if (!found) {
                 std::vector<db_param_t> asdf({
                   session_id,

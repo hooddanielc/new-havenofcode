@@ -1,5 +1,7 @@
 #include <hoc/util.h>
 
+using namespace std;
+
 namespace hoc {
   void hexchar(unsigned char c, unsigned char &hex1, unsigned char &hex2) {
     hex1 = c / 16;

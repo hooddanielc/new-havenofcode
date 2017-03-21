@@ -27,6 +27,7 @@ namespace hoc {
 
           // redirect to google login
           req.set_status(301);
+          req.send_header("Expires", "0");
 
           req.send_header(
             "Location",

@@ -152,7 +152,14 @@ map<string, string> req_t::query() {
   return result;
 }
 
-// request_context->connection->fd
+std::string req_t::user_agent() {
+  if (request_headers.count("User-Agent")) {
+    return request_headers["User-Agent"][0];
+  } else {
+    return "none";
+  }
+}
+
 std::string req_t::ip() {
   socklen_t len;
   struct sockaddr_storage addr;

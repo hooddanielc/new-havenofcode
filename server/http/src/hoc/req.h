@@ -62,6 +62,7 @@ class req_t final {
     std::map<std::string, std::vector<std::string>> cookies();
     session_t<req_t> get_identity();
     std::string ip();
+    std::string user_agent();
 
     // delete copy
     req_t(const req_t &) = delete;

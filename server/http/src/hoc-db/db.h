@@ -21,12 +21,14 @@ namespace hoc {
 
     public:
       db_t();
+      db_t(const std::string &email, const std::string &password);
       ~db_t();
       const char *host();
       const char *user();
       const char *dbname();
       const char *password();
       std::string con_str();
+      std::string con_str(const std::string &user, const std::string &email);
       const char *status();
       const char *last_error();
       bool connected();

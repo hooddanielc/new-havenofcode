@@ -10,16 +10,35 @@ namespace hoc {
   template<typename T>
   class user_route_single_t : public route_t<T> {
     public:
-      user_route_single_t() : route_t<T>("/api/user/:id") {}
+      user_route_single_t() : route_t<T>("/api/users/:id") {}
 
-      void get(T &req, const url_match_result_t &) {
-        req.on_end([&]() {
+      // this route allows only current user
+      // to be selected
+      void get(T &req, const url_match_result_t &match) {
+        auto session = req.get_identity();
+
+        if (session.has_identity() && match.params[0] == "me") {
+          std::vector<db_param_t> params({
+            session.id
+          });
+
+          auto user = session.db.exec(
+            "SELECT U.id, U.email "
+            "FROM hoc_session P "
+            "INNER JOIN \"user\" U "
+            "ON U.id = P.user "
+            "WHERE P.id = $1 AND P.deleted = 'FALSE'",
+            params
+          );
+
           auto json = dj::json_t::empty_object;
           json["user"] = dj::json_t::empty_object;
-          json["user"]["email"] = "something";
-          json["user"]["id"] = "something";
+          json["user"]["id"] = user[0][0].int_val();
+          json["user"]["email"] = user[0][1].data();
           route_t<T>::send_json(req, json, 200);
-        });
+        } else {
+          return route_t<T>::fail_with_error(req, "login required");
+        }
       }
   };
 

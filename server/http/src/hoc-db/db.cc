@@ -13,6 +13,16 @@ namespace hoc {
     }
   }
 
+
+  db_t::db_t(const string &email, const string &password) {
+    conn = PQconnectdb(con_str(email, password).c_str());
+
+    if (PQstatus(conn) != CONNECTION_OK) {
+      PQfinish(conn);
+      throw runtime_error(last_error());
+    }
+  }
+
   db_t::~db_t() {
     PQfinish(conn);
   }
@@ -134,6 +144,15 @@ namespace hoc {
 
   const char *db_t::password() {
     return env_t::get().db_pass;
+  }
+
+  string db_t::con_str(const string &user, const string &password) {
+    return string()
+      .append("host=").append(host())
+      .append(" dbname=").append(dbname())
+      .append(" user=").append(user)
+      .append(" password=").append(password)
+      .append(" connect_timeout=10");
   }
 
   string db_t::con_str() {
