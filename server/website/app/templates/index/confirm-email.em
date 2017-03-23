@@ -1,4 +1,4 @@
-
+= consumer-header
 h1.text-center Confirm Account
 
 if model.error

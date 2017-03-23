@@ -22,7 +22,4 @@ namespace hoc {
       categories[oid_label.c_str()] = cat_label.c_str();
     }
   }
-
-  const char *name(int oid);
-  const char category(int oid);
 }

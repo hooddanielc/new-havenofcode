@@ -1,0 +1,44 @@
+.brand-home {
+  height: 50px;
+  padding: 5px;
+  display: block;
+  font-size: 26px;
+  width: 240px;
+
+  &:hover {
+    text-decoration: normal;
+  }
+
+  img {
+    width: 30px;
+    height: 30px;
+    margin-left: 5px;
+    margin-right: 10px;
+  }
+}
+
+.hoc-nav {
+  position: relative;
+  background: #eef1f2;
+  height: 50px;
+
+  .brand-home {
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+
+  .right-nav {
+    position: absolute;
+    right: 0;
+    top: 0;
+
+    a:not(:last-child) {
+      margin-right: 10px;
+    }
+  }
+
+  .btn {
+    height: 50px;
+  }
+}

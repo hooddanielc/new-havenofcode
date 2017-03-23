@@ -635,7 +635,7 @@ class expect_t final {
     auto temp = strm.str();
     strm.str(std::string());
     strm.clear();
-    return std::move(temp);
+    return temp;
   }
 
   /* The outcome of this expectation.  We construct this during our own
@@ -1023,7 +1023,7 @@ class parser_t final {
       config->use_color = *use_color;
     }
     config->fixture_name_regex = std::move(fixture_name_regex);
-    return std::move(config);
+    return config;
   }
 
   /* TODO */

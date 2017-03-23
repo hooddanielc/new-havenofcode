@@ -21,6 +21,10 @@ class fixture_req_t {
       return "someip";
     }
 
+    std::string user_agent() {
+      return "some agent";
+    }
+
     void send_header(const std::string &header_key, const std::string &header_value) {
       sent_headers[header_key] = header_value;
     }
@@ -70,7 +74,7 @@ FIXTURE(creates_session) {
   EXPECT_EQ(session.has_identity(), false);
   EXPECT_EQ(sessions.rows(), 1);
   EXPECT_EQ(logs.rows(), 1);
-  EXPECT_EQ(string(sessions[0][0].data()).size(), 36);
+  EXPECT_EQ(string(sessions[0][0].data()).size(), static_cast<unsigned long>(36));
   EXPECT_EQ(sessions[0][1].empty(), true);
   EXPECT_EQ(string(logs[0][0].data()), "someip");
   EXPECT_EQ(string(logs[0][1].data()), "some agent");

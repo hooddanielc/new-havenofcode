@@ -4,8 +4,7 @@ import Base from 'ember-simple-auth/authenticators/base';
 export default Base.extend({
   store: Ember.inject.service('store'),
 
-  restore: function (data) {
-    console.log('restore', data);
+  restore: function () {
     return this.get('store').findRecord('user', 'me');
   },
 
@@ -24,7 +23,7 @@ export default Base.extend({
     });
   },
 
-  invalidate: function (data) {
+  invalidate: function () {
     return Ember.$.ajax({
       url: '/api/logout'
     });

@@ -8,6 +8,7 @@ export default Ember.Component.extend({
   shakeAnimation: false,
   failed: false,
   loading: false,
+  session: Ember.inject.service('session'),
 
   fail: function () {
     this.set('failed', true);
@@ -39,6 +40,12 @@ export default Ember.Component.extend({
             confirmPassword: this.get('password')
           }
         })
+      }).then(() => {
+        // then login
+        return this.get('session').authenticate('authenticator:application', {
+          email: this.get('email'),
+          password: this.get('password')
+        });
       }).then(() => {
         this.set('loading', false);
         this.set('success', true);

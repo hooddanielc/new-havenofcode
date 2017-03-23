@@ -15,9 +15,6 @@ namespace hoc {
         return singleton;
       }
 
-      const char *name(int oid);
-      const char *category(int oid);
-
     private:
       std::map<const char *, const char *> names;
       std::map<const char *, const char *> categories;

@@ -1,1 +1,2 @@
+= consumer-header
 = register-form
