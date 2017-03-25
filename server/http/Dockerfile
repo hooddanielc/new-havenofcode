@@ -38,6 +38,9 @@ RUN cd /opt/vmime && cmake . \
 # install libcurl for simple http client functionality
 RUN apt install -y libcurl4-gnutls-dev
 
+# install the c++ binding for postgres
+RUN apt install -y libpqxx-dev
+
 RUN cd /opt/vmime && make -j$(grep -c ^processor /proc/cpuinfo)
 RUN cd /opt/vmime && make install
 
