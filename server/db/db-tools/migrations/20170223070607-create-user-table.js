@@ -219,6 +219,13 @@ module.exports = {
         primary key (id, type),
         foreign key (id, type) references fragment(id, type)
       );
+
+      create table app_token (
+        id              text primary key not null,
+        created_at      timestamp with time zone default 'now()' not null,
+        updated_at      timestamp with time zone default 'now()' not null,
+        refresh_token   text not null
+      );
     `);
   }
 };
