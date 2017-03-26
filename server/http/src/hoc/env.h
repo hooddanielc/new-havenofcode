@@ -16,6 +16,8 @@ namespace hoc {
       const char *google_api_client_id;
       const char *google_api_client_secret;
       const char *no_reply_email;
+      const char *anonymous_user;
+      const char *anonymous_pass;
 
       env_t():
         host(std::getenv("HOC_DOMAIN")),
@@ -25,7 +27,9 @@ namespace hoc {
         db_host(std::getenv("HOC_DB_HOST")),
         google_api_client_id(std::getenv("HOC_GOOGLE_API_CLIENT_ID")),
         google_api_client_secret(std::getenv("HOC_GOOGLE_API_CLIENT_SECRET")),
-        no_reply_email(std::getenv("HOC_NOREPLY_EMAIL")) {};
+        no_reply_email(std::getenv("HOC_NOREPLY_EMAIL")),
+        anonymous_user("anonymous"),
+        anonymous_pass("password") {};
   
     private:
       env_t(env_t &&) = delete;

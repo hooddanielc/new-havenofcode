@@ -81,4 +81,43 @@ namespace hoc {
 
     return result;
   }
+
+  void open_ifstream(std::ifstream &strm, const std::string &path) {
+    strm.open(path);
+    if (!strm) {
+      std::ostringstream msg;
+      msg << "could not open " << std::quoted(path) << " for reading";
+      throw std::runtime_error { msg.str() };
+    }
+    strm.exceptions(std::ios::badbit | std::ios::failbit);
+  }
+
+  char *random_characters(size_t size) {
+    size_t count = 0;
+    char *bytes = static_cast<char *>(alloca(size));
+
+    while (count != size) {
+      char *tmp = static_cast<char *>(alloca(size));
+      {
+        std::ifstream strm;
+        open_ifstream(strm, "/dev/urandom");
+        strm.read(tmp, static_cast<std::streamsize>(size));
+      }
+
+      for (size_t i = 0; i < size; ++i) {
+        if (count == size) {
+          break;
+        }
+
+        if (tmp[i] != '\0' && tmp[i] != '\n' && !isspace(tmp[i])) {
+          bytes[count] = tmp[i];
+          count += 1;
+        }
+      }
+    }
+
+    bytes[count] = '\0';
+
+    return bytes;
+  }
 }

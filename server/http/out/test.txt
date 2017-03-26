@@ -1,0 +1,5 @@
+[1;32m[   10, pass: anonymous_connection ][0m
+[1;32m[   17, pass: admin_connection ][0m
+insert into account (email, salt, password) values ('test@test.com','QM’Á‘±ö†ø#¦ÁÇÿÁó£?d;Õ9Ô2Oàÿ',md5('password'))
+[1;31m[   28, fail: member_connection ][0m
+[1;32mpassed: 2[0m, [1;31mfailed: 1[0m, skipped: 0

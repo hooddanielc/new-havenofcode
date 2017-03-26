@@ -3,10 +3,14 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <istream>
+#include <fstream>
+#include <iomanip>
 #include <algorithm>
 #include <iterator>
 #include <stdlib.h>
 #include <ctype.h>
+#include <stdexcept>
 
 namespace hoc {
   std::string url_encode(const std::string &str);
@@ -21,5 +25,8 @@ namespace hoc {
       result.push_back(item);
     }
   }
+
+  void open_ifstream(std::ifstream &strm, const std::string &path);
+  char *random_characters(size_t size);
 }
 

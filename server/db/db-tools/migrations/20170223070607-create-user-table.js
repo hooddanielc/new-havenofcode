@@ -3,24 +3,82 @@
 module.exports = {
   up: function (queryInterface, Sequelize) {
     return queryInterface.sequelize.query(`
+      create extension if not exists "uuid-ossp";
+
+      do $$
+      begin
+        if not exists (select 1 from pg_roles where rolname = 'admins') then
+          create role admins createrole;
+        end if;
+      end
+      $$;
+
+      do $$
+      begin
+        if not exists (select 1 from pg_roles where rolname = 'members') then
+          create role members;
+        end if;
+      end
+      $$;
+
+      do $$
+      begin
+         if not exists (select * from pg_user where usename = 'anonymous') then
+            create user anonymous with password 'password';
+         end if;
+      end
+      $$;
+
       create table registration (
-        id          uuid primary key not null,
+        id          uuid primary key default uuid_generate_v4() not null,
         created_at  timestamp with time zone default 'now()' not null,
         updated_at  timestamp with time zone default 'now()' not null,
         deleted     boolean default 'FALSE' not null,
         salt        varchar(32) not null,
         password    text not null,
-        email       text not null
+        email       text unique not null
       );
 
+      grant all on registration to admins;
+      grant update (deleted, updated_at) on registration to members;
+      grant insert (salt, password, email) on registration to public;
+      alter table registration enable row level security;
+      create policy admin_registration on registration to admins
+        using (true)
+        with check (true);
+      create policy member_update_registration on registration for update to members
+        using (email = current_user)
+        with check (current_user = email AND deleted = 'TRUE' AND updated_at = NOW());
+      create policy anonymous_select_registration on registration for select to public
+        using (deleted = 'FALSE');
+      create policy anonymous_insert_registration on registration for insert to public
+        with check (deleted = 'FALSE');
+
       create table account (
-        id          uuid primary key not null,
+        id          uuid primary key default uuid_generate_v4() not null,
         created_at  timestamp with time zone default 'now()' not null,
         updated_at  timestamp with time zone default 'now()' not null,
         deleted     boolean default 'FALSE' not null,
         salt        varchar(32) not null,
+        email       text not null,
         name        text default 'unknown'
       );
+
+      grant all on account to admins;
+      grant select, update (updated_at, salt, email, name) on account to members;
+      grant select (id, email, salt, created_at, updated_at) on account to public;
+      alter table account enable row level security;
+      create policy admin_account on account to admins
+        using (true)
+        with check (true);
+      create policy member_account on account to members
+        using (true)
+        with check (email = current_user);
+      create policy anonymous_account on account to public
+        using (true);
+
+
+
 
       create table session (
         id          uuid primary key not null,
