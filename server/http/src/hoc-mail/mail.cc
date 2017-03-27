@@ -122,10 +122,9 @@ namespace mail {
       msg_str
     );
 
-    db_t db;
-    db.exec("BEGIN");
-    auto db_res = db.exec("SELECT refresh_token FROM app_token WHERE id = 'no_reply_email'");
-    db.exec("END");
+    auto c = db::super_user_connection();
+    pqxx::work w(*c);
+    auto db_res = w.exec("SELECT refresh_token FROM app_token WHERE id = 'no_reply_email'");
 
     // send an http request to get a new 
     // access token to send email with
@@ -135,7 +134,7 @@ namespace mail {
 
     get_token_args.append(env_t::get().google_api_client_id)
       .append("&client_secret=").append(env_t::get().google_api_client_secret)
-      .append("&refresh_token=").append(db_res[0][0].data())
+      .append("&refresh_token=").append(db_res[0][0].as<std::string>())
       .append("&grant_type=refresh_token");
 
     request_t get_token_request;

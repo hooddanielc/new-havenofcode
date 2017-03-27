@@ -1,5 +1,4 @@
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 docker run -tid --rm -p 5432:5432 --name hoc-db dhoodlum/havenofcode-db
 
 docker run -ti \
@@ -10,7 +9,7 @@ docker run -ti \
   -v $DIR/http/logs:/root/logs \
   -v $DIR/http/scripts:/root/scripts \
   -v $DIR/website:/root/website \
-  -p 1337:1337 \
+  -p 80:80 \
   dhoodlum/havenofcode-http \
   zsh
 

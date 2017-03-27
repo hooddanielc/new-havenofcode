@@ -42,9 +42,10 @@ ADD ./db-tools/config /var/lib/postgresql/db-tools/config
 ADD ./db-tools/models /var/lib/postgresql/db-tools/models
 ADD ./db-tools/src /var/lib/postgresql/db-tools/src
 ADD ./db-tools/gulpfile.js /var/lib/postgresql/db-tools/gulpfile.js
-ADD ./db-tools/migrations /var/lib/postgresql/db-tools/migrations
 
 RUN cd $HOME/db-tools && ./node_modules/.bin/gulp
+
+ADD ./db-tools/migrations /var/lib/postgresql/db-tools/migrations
 
 RUN  pg_ctl -w start -D $HOME/data && \
   cd $HOME/db-tools && ./node_modules/.bin/sequelize db:migrate --env development && \

@@ -27,7 +27,6 @@ namespace hoc {
         req.on_end([&, str]() {
           str->append("\n\n");
           str->append("ip: ").append(req.ip());
-          req.get_identity();
           req.set_status(200);
           req.send_header("Content-Type", "text/html");
           req.set_content_length(str->size());

@@ -9,9 +9,28 @@
 namespace hoc {
 namespace actions {
 
-void confirm_account(const std::string &email, const std::string &password);
-void register_account(const std::string &email, const std::string &password);
-void login(const std::string &email, const std::string &password);
+pqxx::result confirm_account(
+  const std::string &email,
+  const std::string &password
+);
 
-}
-}
+pqxx::result register_account(
+  const std::string &email,
+  const std::string &password
+);
+
+pqxx::result login(
+  const std::string &email,
+  const std::string &password,
+  const std::string &ip = "none",
+  const std::string &user_agent = "none"
+);
+
+pqxx::result restore_session(
+  const std::string &uuid,
+  const std::string &ip = "none",
+  const std::string &user_agent = "none"
+);
+
+} // actions
+} // hoc

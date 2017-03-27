@@ -33,26 +33,28 @@ module.exports = {
         id          uuid primary key default uuid_generate_v4() not null,
         created_at  timestamp with time zone default 'now()' not null,
         updated_at  timestamp with time zone default 'now()' not null,
-        deleted     boolean default 'FALSE' not null,
         salt        varchar(32) not null,
         password    text not null,
-        email       text unique not null
+        email       text unique not null,
+        verified    boolean default 'FALSE' not null
       );
 
       grant all on registration to admins;
-      grant update (deleted, updated_at) on registration to members;
+      grant update (verified, updated_at) on registration to members;
+      grant select (verified, updated_at, email) on registration to members;
       grant insert (salt, password, email) on registration to public;
+      grant update (salt, password) on registration to public;
+      grant select (id, password, email, verified) on registration to public;
       alter table registration enable row level security;
       create policy admin_registration on registration to admins
         using (true)
         with check (true);
-      create policy member_update_registration on registration for update to members
-        using (email = current_user)
-        with check (current_user = email AND deleted = 'TRUE' AND updated_at = NOW());
-      create policy anonymous_select_registration on registration for select to public
-        using (deleted = 'FALSE');
-      create policy anonymous_insert_registration on registration for insert to public
-        with check (deleted = 'FALSE');
+      create policy member_update_registration on registration to members
+        using (email = current_user AND verified = 'FALSE')
+        with check (current_user = email AND verified = 'TRUE');
+      create policy anonymous_registration on registration to public
+        using (verified = 'FALSE')
+        with check (verified = 'FALSE');
 
       create table account (
         id          uuid primary key default uuid_generate_v4() not null,
@@ -60,7 +62,7 @@ module.exports = {
         updated_at  timestamp with time zone default 'now()' not null,
         deleted     boolean default 'FALSE' not null,
         salt        varchar(32) not null,
-        email       text not null,
+        email       text unique not null,
         name        text default 'unknown'
       );
 
@@ -77,17 +79,46 @@ module.exports = {
       create policy anonymous_account on account to public
         using (true);
 
-
-
+      create function current_account_id() returns uuid as $$
+        select id from account where email = current_user;
+      $$ language sql;
 
       create table session (
-        id          uuid primary key not null,
+        id          uuid primary key default uuid_generate_v4() not null,
         created_at  timestamp with time zone default 'now()' not null,
         updated_at  timestamp with time zone default 'now()' not null,
         deleted     boolean default 'FALSE' not null,
+        ip          text not null,
+        user_agent  text not null,
         created_by  uuid not null,
         foreign key (created_by) references account(id)
       );
+
+      grant all on session to admins;
+      grant select, insert on session to members;
+      grant update (updated_at, deleted) on session to members;
+      alter table session enable row level security;
+      create policy session_admin on session to admins
+        using (true)
+        with check (true);
+      create policy session_member on session to members
+        using (created_by = current_account_id())
+        with check (created_by = current_account_id());
+
+      create table session_ip_log (
+        id          uuid primary key default uuid_generate_v4() not null,
+        created_at  timestamp with time zone default 'now()' not null,
+        ip          text not null,
+        created_by  uuid not null,
+        session     uuid not null,
+        foreign key (created_by) references account(id),
+        foreign key (session) references session(id)
+      );
+
+      grant insert on session_ip_log to members;
+      alter table session_ip_log enable row level security;
+      create policy session_ip_log on session_ip_log for insert to members
+        with check (created_by = current_account_id());
 
       create table experience (
         id          uuid primary key not null,

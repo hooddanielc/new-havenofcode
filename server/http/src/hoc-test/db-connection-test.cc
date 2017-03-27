@@ -1,5 +1,6 @@
 #include <string>
 #include <lick/lick.h>
+#include <functional>
 #include <hoc/json.h>
 #include <hoc/db/connection.h>
 #include <hoc/actions/account.h>
@@ -8,16 +9,19 @@ using namespace std;
 using namespace hoc;
 
 void delete_test_registration() {
-  auto c = db::admin_connection();
+  auto c = db::super_user_connection();
   pqxx::work w(*c);
   w.exec("delete from registration where id is not null");
   w.commit();
 }
 
 void delete_test_account() {
-  auto c = db::admin_connection();
+  auto c = db::super_user_connection();
   pqxx::work w(*c);
+  w.exec("delete from session_ip_log where id is not null");
+  w.exec("delete from session where id is not null");
   w.exec("delete from account where id is not null");
+  w.exec("drop user if exists" + w.quote_name("test_another@test.com"));
   w.exec("drop user if exists" + w.quote_name("test@test.com"));
   w.commit();
 }
@@ -30,38 +34,149 @@ FIXTURE(anonymous_connection) {
 }
 
 FIXTURE(admin_connection) {
-  auto c = db::admin_connection();
+  auto c = db::super_user_connection();
   pqxx::work w(*c);
   pqxx::result r = w.exec("select current_user");
   EXPECT_EQ(r[0][0].as<string>(), "admin_dev");
 }
 
+FIXTURE(member_connection_fails) {
+  EXPECT_FAIL([]() {
+    db::member_connection("asdf", "asdf");
+  });
+}
+
 FIXTURE(register_account_success) {
-  actions::register_account("test@test.com", "password");
+  EXPECT_OK([]() {
+    actions::register_account("test@test.com", "password");
+  });
+
   delete_test_registration();
 }
 
-FIXTURE(register_account_fail_duplicate) {
-  actions::register_account("test@test.com", "password");
-  bool failed = false;
-
-  try {
+FIXTURE(register_account_update_already_registered) {
+  EXPECT_OK([]() {
+    auto c = db::super_user_connection();
+    pqxx::work w(*c);
     actions::register_account("test@test.com", "password");
-  } catch (const std::exception &e) {
-    failed = true;
-  }
+    auto r1 = w.exec("select salt from registration");
+    actions::register_account("test@test.com", "password");
+    auto r2 = w.exec("select salt from registration");
+    EXPECT_NE(r1[0][0].as<string>(), r2[0][0].as<string>());
+  });
 
-  EXPECT_EQ(failed, true);
   delete_test_registration();
+}
+
+FIXTURE(register_account_collision) {
+  EXPECT_OK([]() {
+    actions::register_account("test@test.com", "password");
+    actions::register_account("test_another@test.com", "password");
+    actions::confirm_account("test_another@test.com", "password");
+
+    auto c = db::super_user_connection();
+    pqxx::work w(*c);
+    auto r = w.exec("select verified, email from registration where verified = 'TRUE'");
+    EXPECT_EQ(r.size(), size_t(1));
+    EXPECT_EQ(r[0][1].as<string>(), "test_another@test.com");
+  });
+
+  delete_test_registration();
+  delete_test_account();
 }
 
 FIXTURE(register_then_confirm) {
-  try {
+  EXPECT_OK([]() {
     actions::register_account("test@test.com", "password");
     actions::confirm_account("test@test.com", "password");
-  } catch (const std::exception &e) {
-    cout << e.what() << endl;
-  }
+  });
+
+  delete_test_registration();
+  delete_test_account();
+}
+
+FIXTURE(member_connection) {
+  EXPECT_OK([]() {
+    actions::register_account("test@test.com", "password");
+    actions::confirm_account("test@test.com", "password");
+    db::member_connection("test@test.com", "password");
+  });
+
+  delete_test_registration();
+  delete_test_account();
+}
+
+FIXTURE(member_connection_changes_every_connection) {
+  EXPECT_OK([]() {
+    actions::register_account("test@test.com", "password");
+    actions::confirm_account("test@test.com", "password");
+    auto c = db::member_connection("test@test.com", "password");
+    pqxx::work w(*c);
+    auto r_old_hash = w.exec("select salt from account where email = 'test@test.com'");
+    auto second_c = db::member_connection("test@test.com", "password");
+    pqxx::work second_w(*second_c);
+    auto r_new_hash = second_w.exec("select salt from account where email = 'test@test.com'");
+    EXPECT_NE(r_new_hash[0][0].as<string>(), r_old_hash[0][0].as<string>());
+  });
+
+  delete_test_registration();
+  delete_test_account();
+}
+
+FIXTURE(login_action) {
+  EXPECT_OK([]() {
+    actions::register_account("test@test.com", "password");
+    actions::confirm_account("test@test.com", "password");
+    auto r = actions::login("test@test.com", "password", "some_ip", "some_agent");
+    auto c = db::member_connection("test@test.com", "password");
+    pqxx::work w(*c);
+    auto r_current_id = w.exec("select current_account_id()");
+    auto r_session = w.exec("select id, deleted, ip, user_agent from session");
+    EXPECT_EQ(r[0][1].as<string>(), r_current_id[0][0].as<string>());
+    EXPECT_EQ(r[0][0].as<string>(), r_session[0][0].as<string>());
+    EXPECT_EQ(r_session[0][1].as<bool>(), false);
+    EXPECT_EQ(r_session[0][2].as<string>(), "some_ip");
+    EXPECT_EQ(r_session[0][3].as<string>(), "some_agent");
+  });
+
+  delete_test_registration();
+  delete_test_account();
+}
+
+FIXTURE(session_connection) {
+  EXPECT_OK([]() {
+    actions::register_account("test@test.com", "password");
+    actions::confirm_account("test@test.com", "password");
+    auto r_session = actions::login("test@test.com", "password", "some_ip", "some_agent");
+    auto c = db::session_connection(r_session[0][0].as<string>());
+    pqxx::work w(*c);
+    auto r_current_user = w.exec("select current_user");
+    EXPECT_EQ(r_current_user[0][0].as<string>(), "test@test.com");
+  });
+
+  delete_test_registration();
+  delete_test_account();
+}
+
+FIXTURE(restore_session_action) {
+  EXPECT_OK([]() {
+    actions::register_account("test@test.com", "password");
+    actions::confirm_account("test@test.com", "password");
+    auto r_session = actions::login("test@test.com", "password", "some_ip", "some_agent");
+
+    auto r_restored_session = actions::restore_session(
+      r_session[0][0].as<string>(),
+      "some_ip",
+      "some_agent"
+    );
+
+    EXPECT_EQ(r_restored_session.size(), r_session.size());
+
+    // fails if user agent is different
+    EXPECT_FAIL([&r_session]() {
+      actions::restore_session(r_session[0][0].as<string>());
+    });
+  });
 
   delete_test_registration();
   delete_test_account();

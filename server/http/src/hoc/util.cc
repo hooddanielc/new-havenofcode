@@ -109,7 +109,7 @@ namespace hoc {
           break;
         }
 
-        if (tmp[i] != '\0' && tmp[i] != '\n' && !isspace(tmp[i])) {
+        if (tmp[i] != '\0' && !isspace(tmp[i])) {
           bytes[count] = tmp[i];
           count += 1;
         }

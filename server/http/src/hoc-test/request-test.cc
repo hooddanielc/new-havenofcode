@@ -8,7 +8,7 @@ using namespace hoc;
 
 FIXTURE(get_read_body) {
   request_t req;
-  req.set_url("http://localhost:1337/api/echo");
+  req.set_url("http://localhost/api/echo");
   string result;
 
   req.on_data([&result](char *data, size_t len) {
@@ -23,7 +23,7 @@ FIXTURE(get_read_body) {
 
 FIXTURE(post_write_body) {
   request_t req;
-  req.set_url("http://localhost:1337/api/echo");
+  req.set_url("http://localhost/api/echo");
   req.add_header("Content-Type: application/json");
   req.add_header("Expect:");
   req.add_header("Transfer-Encoding: chunked");

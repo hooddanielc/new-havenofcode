@@ -1305,3 +1305,28 @@ inline dj::lick::expect_t &&operator<<(
   expectation.get_strm() << that;
   return std::move(expectation);
 }
+
+void EXPECT_FAIL(const std::function<void()> &fn) {
+  bool failed = false;
+
+  try {
+    fn();
+  } catch (const std::exception &e) {
+    failed = true;
+  }
+
+  EXPECT_EQ(failed, true);
+}
+
+void EXPECT_OK(const std::function<void()> &fn) {
+  bool failed = false;
+
+  try {
+    fn();
+  } catch (const std::exception &e) {
+    std::cout << e.what() << std::endl;
+    failed = true;
+  }
+
+  EXPECT_EQ(failed, false);
+}

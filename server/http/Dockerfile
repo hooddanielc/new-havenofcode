@@ -58,8 +58,15 @@ RUN echo 'cd $HOME' >> $HOME/.zshrc
 # set path
 ENV PATH $PATH:/usr/local/nginx/sbin:/root/ib:/root/scripts
 
+# add dev scripts
+ADD ./scripts /root/scripts
+
+# build nginx module
+ADD ./src /root/src
+RUN cd $HOME/src && ib main.so
+
 # environment env
-ENV HOC_DOMAIN localhost:1337
+ENV HOC_DOMAIN havenofcode.com
 
 # db env
 ENV HOC_DB_NAME hoc_dev
@@ -72,21 +79,14 @@ ENV HOC_GOOGLE_API_CLIENT_ID XXXXXXXX
 ENV HOC_GOOGLE_API_CLIENT_SECRET XXXXXXXX
 ENV HOC_NOREPLY_EMAIL noreply@havenofcode.com
 
-# add nginx config
-ADD ./config /root/config
-
-# add dev scripts
-ADD ./scripts /root/scripts
-
-# build nginx module
-ADD ./src /root/src
-RUN cd $HOME/src && ib main.so
-
 # create place for nginx logs to live
 RUN mkdir $HOME/logs
 
+# add nginx config
+ADD ./config /root/config
+
 # expose ports
-EXPOSE 1337
+EXPOSE 80
 
 # run nginx
 CMD nginx -g "daemon off;" -c $HOME/config/nginx.conf
