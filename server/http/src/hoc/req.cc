@@ -4,10 +4,6 @@ using namespace std;
 
 namespace hoc {
 
-session_t<req_t> req_t::get_identity() {
-  return session_t<req_t>::make(*this);
-}
-
 void req_t::on_data(const req_t::cb_data_t &fn) {
   data_events.push_back(fn);
 }
@@ -161,21 +157,25 @@ std::string req_t::user_agent() {
 }
 
 std::string req_t::ip() {
-  socklen_t len;
   struct sockaddr_storage addr;
-  char ipstr[INET6_ADDRSTRLEN];
-  getpeername(request_context->connection->fd, (struct sockaddr*) &addr, &len);
-
-  // deal with both IPv4 and IPv6:
-  if (addr.ss_family == AF_INET) {
-    struct sockaddr_in *s = (struct sockaddr_in *)&addr;
-    inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof ipstr);
-  } else { // AF_INET6
-    struct sockaddr_in6 *s = (struct sockaddr_in6 *)&addr;
-    inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof ipstr);
+  socklen_t len = sizeof(addr);
+  if (getpeername(request_context->connection->fd, (struct sockaddr*) &addr, &len) < 0) {
+    throw runtime_error("get peername failed");
+  }
+  char host[NI_MAXHOST];
+  int status = getnameinfo(
+    (struct sockaddr*) &addr, len,
+    host,
+    sizeof(host),
+    nullptr,
+    0,
+    NI_NUMERICHOST
+  );
+  if (status) {
+    throw runtime_error(gai_strerror(status));
   }
 
-  return string(ipstr);
+  return string(host);
 }
 
 map<string, vector<string>> req_t::cookies() {

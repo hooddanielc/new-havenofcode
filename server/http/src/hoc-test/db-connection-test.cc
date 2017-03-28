@@ -2,29 +2,12 @@
 #include <lick/lick.h>
 #include <functional>
 #include <hoc/json.h>
+#include <hoc-test/fixtures.h>
 #include <hoc/db/connection.h>
 #include <hoc/actions/account.h>
 
 using namespace std;
 using namespace hoc;
-
-void delete_test_registration() {
-  auto c = db::super_user_connection();
-  pqxx::work w(*c);
-  w.exec("delete from registration where id is not null");
-  w.commit();
-}
-
-void delete_test_account() {
-  auto c = db::super_user_connection();
-  pqxx::work w(*c);
-  w.exec("delete from session_ip_log where id is not null");
-  w.exec("delete from session where id is not null");
-  w.exec("delete from account where id is not null");
-  w.exec("drop user if exists" + w.quote_name("test_another@test.com"));
-  w.exec("drop user if exists" + w.quote_name("test@test.com"));
-  w.commit();
-}
 
 FIXTURE(anonymous_connection) {
   auto c = db::anonymous_connection();
@@ -51,7 +34,7 @@ FIXTURE(register_account_success) {
     actions::register_account("test@test.com", "password");
   });
 
-  delete_test_registration();
+  delete_test_accounts();
 }
 
 FIXTURE(register_account_update_already_registered) {
@@ -65,7 +48,7 @@ FIXTURE(register_account_update_already_registered) {
     EXPECT_NE(r1[0][0].as<string>(), r2[0][0].as<string>());
   });
 
-  delete_test_registration();
+  delete_test_accounts();
 }
 
 FIXTURE(register_account_collision) {
@@ -81,8 +64,7 @@ FIXTURE(register_account_collision) {
     EXPECT_EQ(r[0][1].as<string>(), "test_another@test.com");
   });
 
-  delete_test_registration();
-  delete_test_account();
+  delete_test_accounts();
 }
 
 FIXTURE(register_then_confirm) {
@@ -91,8 +73,7 @@ FIXTURE(register_then_confirm) {
     actions::confirm_account("test@test.com", "password");
   });
 
-  delete_test_registration();
-  delete_test_account();
+  delete_test_accounts();
 }
 
 FIXTURE(member_connection) {
@@ -102,8 +83,7 @@ FIXTURE(member_connection) {
     db::member_connection("test@test.com", "password");
   });
 
-  delete_test_registration();
-  delete_test_account();
+  delete_test_accounts();
 }
 
 FIXTURE(member_connection_changes_every_connection) {
@@ -119,8 +99,7 @@ FIXTURE(member_connection_changes_every_connection) {
     EXPECT_NE(r_new_hash[0][0].as<string>(), r_old_hash[0][0].as<string>());
   });
 
-  delete_test_registration();
-  delete_test_account();
+  delete_test_accounts();
 }
 
 FIXTURE(login_action) {
@@ -139,8 +118,7 @@ FIXTURE(login_action) {
     EXPECT_EQ(r_session[0][3].as<string>(), "some_agent");
   });
 
-  delete_test_registration();
-  delete_test_account();
+  delete_test_accounts();
 }
 
 FIXTURE(session_connection) {
@@ -154,8 +132,7 @@ FIXTURE(session_connection) {
     EXPECT_EQ(r_current_user[0][0].as<string>(), "test@test.com");
   });
 
-  delete_test_registration();
-  delete_test_account();
+  delete_test_accounts();
 }
 
 FIXTURE(restore_session_action) {
@@ -178,8 +155,7 @@ FIXTURE(restore_session_action) {
     });
   });
 
-  delete_test_registration();
-  delete_test_account();
+  delete_test_accounts();
 }
 
 int main(int argc, char *argv[]) {

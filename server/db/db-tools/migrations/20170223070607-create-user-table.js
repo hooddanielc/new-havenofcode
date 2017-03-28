@@ -23,9 +23,9 @@ module.exports = {
 
       do $$
       begin
-         if not exists (select * from pg_user where usename = 'anonymous') then
-            create user anonymous with password 'password';
-         end if;
+        if not exists (select * from pg_user where usename = 'anonymous') then
+          create user anonymous with password 'password';
+        end if;
       end
       $$;
 
@@ -90,35 +90,36 @@ module.exports = {
         deleted     boolean default 'FALSE' not null,
         ip          text not null,
         user_agent  text not null,
-        created_by  uuid not null,
+        created_by  uuid,
         foreign key (created_by) references account(id)
       );
 
       grant all on session to admins;
-      grant select, insert on session to members;
-      grant update (updated_at, deleted) on session to members;
+      grant select, insert on session to public;
+      grant update (updated_at, deleted, ip) on session to public;
       alter table session enable row level security;
       create policy session_admin on session to admins
         using (true)
         with check (true);
-      create policy session_member on session to members
-        using (created_by = current_account_id())
-        with check (created_by = current_account_id());
+      create policy session_public on session to public
+        using (created_by is NULL or created_by = current_account_id())
+        with check (created_by is NULL or created_by = current_account_id());
 
       create table session_ip_log (
         id          uuid primary key default uuid_generate_v4() not null,
         created_at  timestamp with time zone default 'now()' not null,
         ip          text not null,
-        created_by  uuid not null,
+        user_agent  text not null,
+        created_by  uuid,
         session     uuid not null,
         foreign key (created_by) references account(id),
         foreign key (session) references session(id)
       );
 
-      grant insert on session_ip_log to members;
+      grant insert on session_ip_log to public;
       alter table session_ip_log enable row level security;
-      create policy session_ip_log on session_ip_log for insert to members
-        with check (created_by = current_account_id());
+      create policy session_ip_log on session_ip_log for insert to public
+        with check (created_by is null or created_by = current_account_id());
 
       create table experience (
         id          uuid primary key not null,

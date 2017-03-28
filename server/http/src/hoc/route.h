@@ -25,7 +25,7 @@ namespace hoc {
       const std::vector<std::string> params;
   };
 
-  template <typename T>
+  template <typename req_t>
   class route_t {
     private:
       route_t(route_t &&) = delete;
@@ -37,19 +37,38 @@ namespace hoc {
       route_t(std::string pat) : pattern(pat) {}
 
     public:
-      virtual void get(T &, const url_match_result_t &) {};
-      virtual void post(T &, const url_match_result_t &) {};
-      virtual void put(T &, const url_match_result_t &) {};
-      virtual void del(T &, const url_match_result_t &) {};
+      virtual void all(req_t &, const url_match_result_t &) {};
+      virtual void get(req_t &, const url_match_result_t &) {};
+      virtual void post(req_t &, const url_match_result_t &) {};
+      virtual void put(req_t &, const url_match_result_t &) {};
+      virtual void del(req_t &, const url_match_result_t &) {};
 
-      void fail_with_error(T &req, const std::string &msg, int status = 400) {
+      void exec(req_t &req, const url_match_result_t &match) {
+        auto method = req.method();
+
+        if (method == "GET") {
+          this->get(req, match);
+        } else if (method == "POST") {
+          this->post(req, match);
+        } else if (method == "PUT") {
+          this->put(req, match);
+        } else if (method == "DELETE") {
+          this->del(req, match);
+        }
+      };
+
+      restore_session(req_t &req) {
+        
+      }
+
+      void fail_with_error(req_t &req, const std::string &msg, int status = 400) {
         auto json = dj::json_t::empty_object;
         json["error"] = true;
         json["message"] = msg;
         send_json(req, json, status);
       }
 
-      void send_json(T &req, const dj::json_t &json, int status) {
+      void send_json(req_t &req, const dj::json_t &json, int status) {
         req.set_status(status);
         auto out(json.to_string());
         req.set_content_length(out.size());

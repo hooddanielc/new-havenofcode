@@ -7,14 +7,14 @@ namespace hoc {
 
   void assign_routes()  {
     routes.push_back(unique_ptr<route_t<req_t>>(new echo_route_t<req_t>()));
-    routes.push_back(unique_ptr<route_t<req_t>>(new login_route_t<req_t>()));
-    routes.push_back(unique_ptr<route_t<req_t>>(new logout_route_t<req_t>()));
+    //routes.push_back(unique_ptr<route_t<req_t>>(new login_route_t<req_t>()));
+    //routes.push_back(unique_ptr<route_t<req_t>>(new logout_route_t<req_t>()));
     routes.push_back(unique_ptr<route_t<req_t>>(new register_route_t<req_t>()));
     routes.push_back(unique_ptr<route_t<req_t>>(new set_noreply_token_route_t<req_t>()));
     routes.push_back(unique_ptr<route_t<req_t>>(new set_noreply_token_callback_route_t<req_t>()));
-    routes.push_back(unique_ptr<route_t<req_t>>(new confirm_registration_route_t<req_t>()));
-    routes.push_back(unique_ptr<route_t<req_t>>(new user_route_single_t<req_t>()));
-    routes.push_back(unique_ptr<route_t<req_t>>(new user_route_query_t<req_t>()));
+    //routes.push_back(unique_ptr<route_t<req_t>>(new confirm_registration_route_t<req_t>()));
+    //routes.push_back(unique_ptr<route_t<req_t>>(new user_route_single_t<req_t>()));
+    //routes.push_back(unique_ptr<route_t<req_t>>(new user_route_query_t<req_t>()));
   }
 
   void end_server_error(req_t &req, const string &message) {
@@ -33,15 +33,7 @@ namespace hoc {
         auto match = route->match(req.uri().c_str());
 
         if (match.pass == true) {
-          if (req.method() == "GET") {
-            route->get(req, match);
-          } else if (req.method() == "POST") {
-            route->post(req, match);
-          } else if (req.method() == "PUT") {
-            route->put(req, match);
-          } else if (req.method() == "DELETE") {
-            route->del(req, match);
-          }
+          route->exec(req, match);
         }
       }
     } catch (runtime_error e) {

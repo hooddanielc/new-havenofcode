@@ -5,7 +5,7 @@
 #include <hoc/route.h>
 #include <hoc/json.h>
 #include <hoc/request.h>
-#include <hoc-db/db.h>
+#include <hoc/db/connection.h>
 
 namespace hoc {
 
@@ -82,18 +82,14 @@ class set_noreply_token_callback_route_t : public route_t<T> {
             req.set_content_length(body.size());
             req.send_body(body);
           } else {
-            // update no_reply_email token in db
-
-            db_t db;
-            db.exec("BEGIN");
-            std::string param(json["refresh_token"].as<std::string>());
-            std::vector<db_param_t> params({ param });
-            db.exec(
-              "UPDATE app_token SET refresh_token = $1 "
-              "WHERE id = 'no_reply_email'",
-              params
-            );
-            db.exec("END");
+            auto c = db::super_user_connection();
+            pqxx::work w(*c);
+            std::stringstream ss;
+            ss << "update app_token set refresh_token = "
+               << w.quote(json["refresh_token"].as<std::string>()) << " "
+               << "where id = 'no_reply_email'";
+            w.exec(ss);
+            w.commit();
 
             req.set_status(200);
             auto body = profile_json.to_string();

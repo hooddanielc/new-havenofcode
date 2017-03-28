@@ -32,5 +32,12 @@ pqxx::result restore_session(
   const std::string &user_agent = "none"
 );
 
+pqxx::result restore_session(
+  std::shared_ptr<pqxx::connection> c,
+  const std::string &uuid,
+  const std::string &ip,
+  const std::string &user_agent
+);
+
 } // actions
 } // hoc

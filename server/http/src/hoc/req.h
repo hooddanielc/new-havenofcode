@@ -6,8 +6,8 @@
 #include <map>
 #include <iostream>
 #include <sys/socket.h>
+#include <netdb.h>
 #include <hoc/util.h>
-#include <hoc/session.h>
 
 extern "C" {
   #include <ngx_config.h>
@@ -60,7 +60,6 @@ class req_t final {
     header_list_t request_headers;
     std::map<std::string, std::string> query();
     std::map<std::string, std::vector<std::string>> cookies();
-    session_t<req_t> get_identity();
     std::string ip();
     std::string user_agent();
 

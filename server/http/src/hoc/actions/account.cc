@@ -117,11 +117,11 @@ pqxx::result login(
 }
 
 pqxx::result restore_session(
+  shared_ptr<pqxx::connection> c,
   const string &uuid,
   const string &ip,
   const string &user_agent
 ) {
-  auto c = db::session_connection(uuid);
   pqxx::work w(*c);
   stringstream ss;
 
@@ -151,15 +151,25 @@ pqxx::result restore_session(
 
   ss.str(string());
   ss.clear();
-  ss << "insert into session_ip_log (ip, session, created_by) values ("
+  ss << "insert into session_ip_log (ip, session, created_by, user_agent) values ("
      << w.quote(ip) << ","
      << w.quote(uuid) << ","
-     << "current_account_id()"
+     << "current_account_id()" << ","
+     << w.quote(user_agent)
      << ")";
   w.exec(ss);
 
   w.commit();
   return r_session;
+}
+
+pqxx::result restore_session(
+  const string &uuid,
+  const string &ip,
+  const string &user_agent
+) {
+  auto c = db::session_connection(uuid);
+  return restore_session(c, uuid, ip, user_agent);
 }
 
 }

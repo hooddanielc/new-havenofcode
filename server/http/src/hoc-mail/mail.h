@@ -16,8 +16,8 @@
 #include <hoc/env.h>
 #include <hoc/app.h>
 #include <hoc/request.h>
-#include <hoc-db/db.h>
 #include <hoc/db/connection.h>
+#include <hoc/json.h>
 
 namespace hoc {
   namespace mail {
