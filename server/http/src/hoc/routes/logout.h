@@ -9,19 +9,15 @@ namespace hoc {
     public:
       logout_route_t() : route_t<T>("/api/logout") {}
 
-      void get(T &req, const url_match_result_t &) override {
-        req.on_end([&]() {
-          try {
-            auto session = req.get_identity();
-            session.invalidate(req);
-            auto result = dj::json_t::empty_object;
-            result["success"] = true;
-            route_t<T>::send_json(req, result, 200);
-          } catch (const std::exception &e) {
-            std::cout << e.what() << std::endl;
-            return route_t<T>::fail_with_error(req, "session error");
-          }
-        });
+      void get(T &req, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &session) override {
+        if (!session->authenticated()) {
+          return route_t<T>::fail_with_error(req, "no login");
+        } else {
+          session->logout(req);
+          auto result = dj::json_t::empty_object;
+          result["success"] = true;
+          route_t<T>::send_json(req, result, 200);
+        }
       }
   };
 }

@@ -8,7 +8,7 @@ namespace hoc {
     public:
       echo_route_t() : route_t<T>("/api/echo") {}
 
-      void serve(T &req) {
+      void all(T &req, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &) {
         auto str = new std::string();
         str->append(req.request_line());
 
@@ -33,22 +33,6 @@ namespace hoc {
           req.send_body(*str);
           delete str;
         });
-      }
-
-      void get(T &req, const url_match_result_t &) override {
-        serve(req);
-      }
-
-      void post(T &req, const url_match_result_t &) override {
-        serve(req);
-      }
-
-      void put(T &req, const url_match_result_t &) override {
-        serve(req);
-      }
-
-      void del(T &req, const url_match_result_t &) override {
-        serve(req);
       }
   };
 }

@@ -7,14 +7,14 @@ namespace hoc {
 
   void assign_routes()  {
     routes.push_back(unique_ptr<route_t<req_t>>(new echo_route_t<req_t>()));
-    //routes.push_back(unique_ptr<route_t<req_t>>(new login_route_t<req_t>()));
-    //routes.push_back(unique_ptr<route_t<req_t>>(new logout_route_t<req_t>()));
+    routes.push_back(unique_ptr<route_t<req_t>>(new login_route_t<req_t>()));
+    routes.push_back(unique_ptr<route_t<req_t>>(new logout_route_t<req_t>()));
     routes.push_back(unique_ptr<route_t<req_t>>(new register_route_t<req_t>()));
     routes.push_back(unique_ptr<route_t<req_t>>(new set_noreply_token_route_t<req_t>()));
     routes.push_back(unique_ptr<route_t<req_t>>(new set_noreply_token_callback_route_t<req_t>()));
-    //routes.push_back(unique_ptr<route_t<req_t>>(new confirm_registration_route_t<req_t>()));
-    //routes.push_back(unique_ptr<route_t<req_t>>(new user_route_single_t<req_t>()));
-    //routes.push_back(unique_ptr<route_t<req_t>>(new user_route_query_t<req_t>()));
+    routes.push_back(unique_ptr<route_t<req_t>>(new confirm_registration_route_t<req_t>()));
+    routes.push_back(unique_ptr<route_t<req_t>>(new user_route_single_t<req_t>()));
+    routes.push_back(unique_ptr<route_t<req_t>>(new user_route_query_t<req_t>()));
   }
 
   void end_server_error(req_t &req, const string &message) {
@@ -28,12 +28,14 @@ namespace hoc {
   }
 
   void route_request(req_t &req) {
+    std::shared_ptr<session_t<req_t>> session(new session_t<req_t>(req));
+
     try {
       for (auto &route : routes) {
         auto match = route->match(req.uri().c_str());
 
         if (match.pass == true) {
-          route->exec(req, match);
+          route->exec(req, match, session);
         }
       }
     } catch (runtime_error e) {

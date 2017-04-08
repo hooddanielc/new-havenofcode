@@ -14,7 +14,7 @@ namespace hoc {
     public:
       register_route_t() : route_t<T>("/api/register") {}
 
-      void post(T &req, const url_match_result_t &) override {
+      void post(T &req, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &) override {
         auto str = new std::string("");
 
         req.on_data([str](const std::string &data) mutable {
@@ -49,7 +49,7 @@ namespace hoc {
             result["user"]["id"] = r[0][0].as<std::string>();
             route_t<T>::send_json(req, result, 200);
           } catch (const std::exception &e) {
-            std::cout << e.what() << std::endl;
+            route_t<T>::fail_with_error(req, e.what());
           }
         });
       }

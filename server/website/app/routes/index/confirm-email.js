@@ -7,17 +7,9 @@ export default Ember.Route.extend(UnauthenticatedRouteMixin, {
       email: params.email
     }).then((res) => {
       const user = res.objectAt(0);
-
-      if (!user) {
-        return { error: 'user missing' };
-      }
-
-      if (user.get('active')) {
-        return { error: 'user already active' };
-      }
-
+      return { error: 'user already active', user };
+    }).catch(() => {
       return {
-        user: user,
         params: params
       };
     });

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <functional>
 #include <hoc/json.h>
+#include <hoc/session.h>
 
 namespace hoc {
   enum url_token_type_t {
@@ -37,29 +38,26 @@ namespace hoc {
       route_t(std::string pat) : pattern(pat) {}
 
     public:
-      virtual void all(req_t &, const url_match_result_t &) {};
-      virtual void get(req_t &, const url_match_result_t &) {};
-      virtual void post(req_t &, const url_match_result_t &) {};
-      virtual void put(req_t &, const url_match_result_t &) {};
-      virtual void del(req_t &, const url_match_result_t &) {};
+      virtual void all(req_t &, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &) {};
+      virtual void get(req_t &, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &) {};
+      virtual void post(req_t &, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &) {};
+      virtual void put(req_t &, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &) {};
+      virtual void del(req_t &, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &) {};
 
-      void exec(req_t &req, const url_match_result_t &match) {
+      void exec(req_t &req, const url_match_result_t &match, std::shared_ptr<session_t<req_t>> &session) {
         auto method = req.method();
+        all(req, match, session);
 
         if (method == "GET") {
-          this->get(req, match);
+          this->get(req, match, session);
         } else if (method == "POST") {
-          this->post(req, match);
+          this->post(req, match, session);
         } else if (method == "PUT") {
-          this->put(req, match);
+          this->put(req, match, session);
         } else if (method == "DELETE") {
-          this->del(req, match);
+          this->del(req, match, session);
         }
       };
-
-      restore_session(req_t &req) {
-        
-      }
 
       void fail_with_error(req_t &req, const std::string &msg, int status = 400) {
         auto json = dj::json_t::empty_object;
