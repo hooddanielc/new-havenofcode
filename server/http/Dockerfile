@@ -11,42 +11,42 @@ RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | \
 RUN apt update
 RUN apt install -y postgresql-9.6
 RUN apt install -y libpq-dev
-
-# install nginx
 RUN apt install -y build-essential
 RUN apt install -y libpcre3 libpcre3-dev
 RUN apt install -y zlib1g zlib1g-dev
 RUN apt install -y libssl-dev
-
-# install gmp for cryptography
+RUN apt install -y libcurl4-gnutls-dev
+RUN apt install -y libpqxx-dev
 RUN apt install -y libgmp-dev
-
-# install vmime for email
-RUN cd /opt && git clone https://github.com/kisli/vmime.git
 RUN apt install -y cmake
 RUN apt install -y libicu-dev
 RUN apt install -y gnutls-dev
 RUN apt install -y libgsasl7-dev
 RUN apt install -y libboost-all-dev
 RUN apt install -y libgtk-3-dev
+RUN apt install -y libgcc-4.9-dev
 
+# download sources
+RUN cd /opt && git clone https://github.com/kisli/vmime.git
+RUN cd ~ && wget http://nginx.org/download/nginx-1.10.2.tar.gz
+RUN cd ~ && tar -xvf nginx-1.10.2.tar.gz
+RUN cd /opt && git clone --branch 1.0.101 https://github.com/aws/aws-sdk-cpp.git
+
+# build vmime
 RUN cd /opt/vmime && cmake . \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX=/usr \
   -DVMIME_TLS_SUPPORT_LIB=openssl
-
-# install libcurl for simple http client functionality
-RUN apt install -y libcurl4-gnutls-dev
-
-# install the c++ binding for postgres
-RUN apt install -y libpqxx-dev
-
 RUN cd /opt/vmime && make -j$(grep -c ^processor /proc/cpuinfo)
 RUN cd /opt/vmime && make install
 
+# build aws c++ sdk
+RUN cd /tmp && mkdir aws-sdk-cpp && mkdir aws-sdk-cpp/build
+RUN cd /tmp/aws-sdk-cpp/build && cmake -DCMAKE_BUILD_TYPE=Release /opt/aws-sdk-cpp
+RUN cd /tmp/aws-sdk-cpp/build && make -j$(grep -c ^processor /proc/cpuinfo)
+RUN cd /tmp/aws-sdk-cpp/build && make install
+
 # build nginx module
-RUN cd ~ && wget http://nginx.org/download/nginx-1.10.2.tar.gz
-RUN cd ~ && tar -xvf nginx-1.10.2.tar.gz
 ADD ./ngx-loadable-cpp-module /root/ngx-loadable-cpp-module
 RUN cd ~/nginx-1.10.2 && ./configure --with-http_ssl_module --add-module=/root/ngx-loadable-cpp-module
 RUN cd ~/nginx-1.10.2 && make -j$(grep -c ^processor /proc/cpuinfo) && make install
@@ -78,6 +78,10 @@ ENV HOC_DB_HOST hoc-db
 ENV HOC_GOOGLE_API_CLIENT_ID XXXXXXXX
 ENV HOC_GOOGLE_API_CLIENT_SECRET XXXXXXXX
 ENV HOC_NOREPLY_EMAIL noreply@havenofcode.com
+
+# amazon web services access
+ENV HOC_AWS_KEY XXXXXXXX
+ENV HOC_AWS_SECRET XXXXXXXX
 
 # create place for nginx logs to live
 RUN mkdir $HOME/logs
