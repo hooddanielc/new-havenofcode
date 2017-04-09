@@ -18,6 +18,8 @@ namespace hoc {
       const char *no_reply_email;
       const char *anonymous_user;
       const char *anonymous_pass;
+      const char *aws_key;
+      const char *aws_secret;
 
       env_t():
         host(std::getenv("HOC_DOMAIN")),
@@ -29,7 +31,9 @@ namespace hoc {
         google_api_client_secret(std::getenv("HOC_GOOGLE_API_CLIENT_SECRET")),
         no_reply_email(std::getenv("HOC_NOREPLY_EMAIL")),
         anonymous_user("anonymous"),
-        anonymous_pass("password") {};
+        anonymous_pass("password"),
+        aws_key(std::getenv("HOC_AWS_KEY")),
+        aws_secret(std::getenv("HOC_AWS_SECRET")) {};
   
     private:
       env_t(env_t &&) = delete;
