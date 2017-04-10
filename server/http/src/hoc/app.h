@@ -74,7 +74,7 @@ class app_t final {
 
     app_t(app_t &&) = delete;
     app_t(const app_t &) = delete;
-    ~app_t() = default;
+    ~app_t();
     app_t &operator=(app_t &&) = delete;
     app_t &operator=(const app_t &) = delete;
 

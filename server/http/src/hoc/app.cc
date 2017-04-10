@@ -3,6 +3,10 @@
 using namespace std;
 
 namespace hoc {
+  app_t::~app_t() {
+    emit_exit();
+  }
+
   void app_t::on_request(const cb_request_t &fn) {
     request_events.push_back(fn);
   }
