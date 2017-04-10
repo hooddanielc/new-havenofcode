@@ -121,8 +121,85 @@ module.exports = {
       create policy session_ip_log on session_ip_log for insert to public
         with check (created_by is null or created_by = current_account_id());
 
+      create type file_state as enum (
+        'pending', 'complete', 'canceled'
+      );
+
+      create table file (
+        id          uuid primary key default uuid_generate_v4() not null,
+        created_by  uuid default current_account_id() not null,
+        created_at  timestamp with time zone default 'now()' not null,
+        updated_at  timestamp with time zone default 'now()' not null,
+        deleted     boolean default 'FALSE' not null,
+        aws_key     text not null,
+        aws_region  text not null,
+        bits        bigint not null,
+        status      file_state default 'pending' not null,
+        progress    real default 0,
+        foreign key (created_by) references account(id)
+      );
+
+      grant all on file to admins;
+      grant insert on file to members;
+      grant update (
+        updated_at,
+        deleted,
+        status,
+        progress
+      ) on file to members;
+      grant select on file to public;
+      alter table file enable row level security;
+      create policy file_admin on file to admins
+        using (true)
+        with check (true);
+      create policy file_members on file to members
+        using (deleted = 'FALSE')
+        with check (
+          created_by = current_account_id() and
+          updated_at is not null
+        );
+      create policy file_public on file to public
+        using (deleted = 'FALSE')
+        with check (false);
+
+      create table file_part (
+        id              uuid primary key default uuid_generate_v4() not null,
+        created_at      timestamp with time zone default 'now()' not null,
+        updated_at      timestamp with time zone default 'now()' not null,
+        deleted         boolean default 'FALSE' not null,
+        bits            int not null check (bits > 0),
+        aws_etag        text,
+        aws_part_number int not null check (aws_part_number > 0),
+        pending         boolean default 'TRUE',
+        created_by      uuid default current_account_id() not null,
+        file            uuid,
+        foreign key     (created_by) references account(id),
+        foreign key     (file) references file(id)
+      );
+
+      grant all on file_part to admins;
+      grant insert, select on file_part to members;
+      grant update (
+        updated_at,
+        deleted,
+        aws_etag,
+        aws_part_number,
+        pending
+      ) on file_part to members;
+      alter table file_part enable row level security;
+      create policy file_part_admin on file_part to admins
+        using (true)
+        with check (true);
+      create policy file_part_members on file_part to members
+        using (created_by = current_account_id() and deleted = 'FALSE')
+        with check (
+          created_by = current_account_id() and
+          file is not null and
+          updated_at is not null
+        );
+
       create table experience (
-        id          uuid primary key not null,
+        id          uuid primary key default uuid_generate_v4() not null,
         created_at  timestamp with time zone default 'now()' not null,
         updated_at  timestamp with time zone default 'now()' not null,
         created_by  uuid not null,

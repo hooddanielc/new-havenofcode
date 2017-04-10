@@ -41,10 +41,12 @@ RUN cd /opt/vmime && make -j$(grep -c ^processor /proc/cpuinfo)
 RUN cd /opt/vmime && make install
 
 # build aws c++ sdk
-RUN cd /tmp && mkdir aws-sdk-cpp && mkdir aws-sdk-cpp/build
-RUN cd /tmp/aws-sdk-cpp/build && cmake -DCMAKE_BUILD_TYPE=Release /opt/aws-sdk-cpp
-RUN cd /tmp/aws-sdk-cpp/build && make -j$(grep -c ^processor /proc/cpuinfo)
-RUN cd /tmp/aws-sdk-cpp/build && make install
+RUN mkdir /opt/aws-sdk-cpp/build
+RUN cd /opt/aws-sdk-cpp/build && cmake \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_ONLY="s3" ..
+RUN cd /opt/aws-sdk-cpp/build && make -j$(grep -c ^processor /proc/cpuinfo)
+RUN cd /opt/aws-sdk-cpp/build && make install
 
 # build nginx module
 ADD ./ngx-loadable-cpp-module /root/ngx-loadable-cpp-module
