@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdlib>
+#include <cstdint>
 #include <hoc/route.h>
 
 namespace hoc {
@@ -52,28 +53,95 @@ public:
 
       ss << "limit " << w.esc(limit) << " offset " << w.esc(offset);
       auto result = w.exec(ss);
-      dj::json_t::array_t users;
+      dj::json_t::array_t files;
 
       for (size_t i = 0; i < result.size(); ++i) {
         auto user = dj::json_t::empty_object;
         user["id"] = result[i][0].as<std::string>();
-        user["created_at"] = result[i][1].as<std::string>();
-        user["updated_at"] = result[i][2].as<std::string>();
-        user["created_by"] = result[i][3].as<std::string>();
-        user["aws_key"] = result[i][4].as<std::string>();
-        user["aws_region"] = result[i][5].as<std::string>();
+        user["createdAt"] = result[i][1].as<std::string>();
+        user["updatedAt"] = result[i][2].as<std::string>();
+        user["createdBy"] = result[i][3].as<std::string>();
+        user["awsKey"] = result[i][4].as<std::string>();
+        user["awsRegion"] = result[i][5].as<std::string>();
         user["bits"] = result[i][6].as<std::string>();
         user["status"] = result[i][7].as<std::string>();
         user["progress"] = result[i][8].as<std::string>();
-        users.emplace_back(std::move(user));
+        files.emplace_back(std::move(user));
       }
 
       auto json = dj::json_t::empty_object;
-      json["users"] = std::move(users);
+      json["files"] = std::move(files);
       route_t<T>::send_json(req, json, 200);
     } catch (const std::exception &e) {
       route_t<T>::fail_with_error(req, e.what());
     }
+  }
+
+  void post(T &req, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &session) {
+    if (!session->authenticated()) {
+      return route_t<T>::fail_with_error(req, "login required", 403);
+    }
+
+    auto str = new std::string();
+    req.on_data([str](const std::string &data) {
+      str->append(data);
+    });
+
+    req.on_end([&, str, session]() {
+      dj::json_t json;
+
+      try {
+        json = dj::json_t::from_string((*str).c_str());
+        delete str;
+      } catch (const std::exception &e) {
+        delete str;
+        return route_t<T>::fail_with_error(req, "invalid json");
+      }
+
+      if (!json.contains("file")) {
+        return route_t<T>::fail_with_error(req, "file object required");
+      }
+
+      std::string bits("");
+      if (!json["file"].contains("bits")) {
+        return route_t<T>::fail_with_error(req, "bits property required in file object");
+      } else {
+        bits = json["file"]["bits"].as<std::string>();
+      }
+
+      std::string name("unnamed");
+      if (json["file"].contains("name")) {
+        name = json["file"]["name"].as<std::string>();
+      }
+
+      pqxx::work w(*session->db);
+      std::stringstream ss;
+      ss << "insert into file (bits, name) values ("
+         << w.esc(bits) << ","
+         << w.quote(name) << ") returning "
+         << "id, created_by, created_at, updated_at, name, aws_key, aws_region, "
+         << "bits, status, progress";
+
+      try {
+        auto res = w.exec(ss);
+        w.commit();
+        auto json = dj::json_t::empty_object;
+        json["files"] = dj::json_t::empty_object;
+        json["files"]["id"] = res[0][0].as<std::string>();
+        json["files"]["createdBy"] = res[0][1].as<std::string>();
+        json["files"]["createdAt"] = res[0][2].as<std::string>();
+        json["files"]["updatedAt"] = res[0][3].as<std::string>();
+        json["files"]["name"] = res[0][4].as<std::string>();
+        json["files"]["awsKey"] = res[0][5].as<std::string>();
+        json["files"]["awsRegion"] = res[0][6].as<std::string>();
+        json["files"]["bits"] = res[0][7].as<std::string>();
+        json["files"]["status"] = res[0][8].as<std::string>();
+        json["files"]["progress"] = res[0][9].as<std::string>();
+        route_t<T>::send_json(req, json, 200);
+      } catch (const std::exception &e) {
+        route_t<T>::fail_with_error(req, e.what());
+      }
+    });
   }
 };
 

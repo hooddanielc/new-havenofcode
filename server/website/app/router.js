@@ -13,6 +13,7 @@ Router.map(function() {
     this.route('confirm-email', { path: '/confirm-email/:secret/:email'});
     this.route('login');
     this.route('logout');
+    this.route('files');
     this.route('experience-dashboard');
   });
 });
