@@ -15,6 +15,7 @@
 #include <hoc/routes/echo.h>
 #include <hoc/routes/confirm_registration.h>
 #include <hoc/routes/user.h>
+#include <hoc/routes/file.h>
 
 namespace hoc {
   void assign_routes();

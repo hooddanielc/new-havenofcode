@@ -15,6 +15,7 @@ namespace hoc {
     routes.push_back(unique_ptr<route_t<req_t>>(new confirm_registration_route_t<req_t>()));
     routes.push_back(unique_ptr<route_t<req_t>>(new user_route_single_t<req_t>()));
     routes.push_back(unique_ptr<route_t<req_t>>(new user_route_query_t<req_t>()));
+    routes.push_back(unique_ptr<route_t<req_t>>(new file_route_query_t<req_t>()));
   }
 
   void end_server_error(req_t &req, const string &message) {
