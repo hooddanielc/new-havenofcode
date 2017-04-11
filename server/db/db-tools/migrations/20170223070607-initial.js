@@ -29,6 +29,13 @@ module.exports = {
       end
       $$;
 
+      create function trigger_updated_at() returns trigger as $$
+        begin
+          new.updated_at = now();
+          return new;
+        end;
+      $$ language 'plpgsql';
+
       create table registration (
         id          uuid primary key default uuid_generate_v4() not null,
         created_at  timestamp with time zone default 'now()' not null,
@@ -38,6 +45,10 @@ module.exports = {
         email       text unique not null,
         verified    boolean default 'FALSE' not null
       );
+
+      create trigger tigger_registration_update
+        before update on registration for each row
+        execute procedure trigger_updated_at();
 
       grant all on registration to admins;
       grant update (verified, updated_at) on registration to members;
@@ -65,6 +76,10 @@ module.exports = {
         email       text unique not null,
         name        text default 'unknown'
       );
+
+      create trigger tigger_account_update
+        before update on account for each row
+        execute procedure trigger_updated_at();
 
       grant all on account to admins;
       grant select, update (updated_at, salt, email, name) on account to members;
@@ -94,6 +109,10 @@ module.exports = {
         foreign key (created_by) references account(id)
       );
 
+      create trigger tigger_session_update
+        before update on session for each row
+        execute procedure trigger_updated_at();
+
       grant all on session to admins;
       grant select, insert on session to public;
       grant update (updated_at, deleted, ip) on session to public;
@@ -116,6 +135,10 @@ module.exports = {
         foreign key (session) references session(id)
       );
 
+      create trigger tigger_session_ip_log_update
+        before update on session_ip_log for each row
+        execute procedure trigger_updated_at();
+
       grant insert on session_ip_log to public;
       alter table session_ip_log enable row level security;
       create policy session_ip_log on session_ip_log for insert to public
@@ -132,6 +155,7 @@ module.exports = {
         updated_at  timestamp with time zone default 'now()' not null,
         deleted     boolean default 'FALSE' not null,
         name        text,
+        upload_id   text,
         aws_key     text default '/' || current_account_id() || '/' || uuid_generate_v4(),
         aws_region  text default 'us-west-2' not null,
         bits        bigint not null,
@@ -139,6 +163,10 @@ module.exports = {
         progress    real default 0,
         foreign key (created_by) references account(id)
       );
+
+      create trigger tigger_file_update
+        before update on file for each row
+        execute procedure trigger_updated_at();
 
       grant all on file to admins;
       grant insert on file to members;
@@ -156,8 +184,7 @@ module.exports = {
       create policy file_members on file to members
         using (deleted = 'FALSE')
         with check (
-          created_by = current_account_id() and
-          updated_at is not null
+          created_by = current_account_id()
         );
       create policy file_public on file to public
         using (deleted = 'FALSE')
@@ -177,6 +204,10 @@ module.exports = {
         foreign key     (created_by) references account(id),
         foreign key     (file) references file(id)
       );
+
+      create trigger tigger_file_part_update
+        before update on file_part for each row
+        execute procedure trigger_updated_at();
 
       grant all on file_part to admins;
       grant insert, select on file_part to members;
@@ -212,6 +243,10 @@ module.exports = {
         foreign key (created_by) references account(id)
       );
 
+      create trigger tigger_experience_update
+        before update on experience for each row
+        execute procedure trigger_updated_at();
+
       create table collection (
         id          uuid primary key not null,
         created_at  timestamp with time zone default 'now()' not null,
@@ -225,8 +260,13 @@ module.exports = {
         foreign key (created_by) references account(id)
       );
 
+      create trigger tigger_collection_update
+        before update on collection for each row
+        execute procedure trigger_updated_at();
+
       create table experience_cross_collection (
         id          uuid primary key not null,
+        updated_at  timestamp with time zone default 'now()' not null,
         created_at  timestamp with time zone default 'now()' not null,
         deleted     boolean default 'FALSE' not null,
         experience  uuid not null,
@@ -234,6 +274,10 @@ module.exports = {
         foreign key (experience) references experience(id),
         foreign key (collection) references collection(id)
       );
+
+      create trigger tigger_experience_cross_collection_update
+        before update on experience_cross_collection for each row
+        execute procedure trigger_updated_at();
 
       create table comment_type (
         id          uuid primary key not null,
@@ -255,15 +299,26 @@ module.exports = {
         foreign key (created_by) references account(id)
       );
 
+      create trigger tigger_comment_update
+        before update on comment for each row
+        execute procedure trigger_updated_at();
+
       create table comment_history (
         id              uuid primary key not null,
+        updated_at  timestamp with time zone default 'now()' not null,
+        created_at  timestamp with time zone default 'now()' not null,
         comment_parent  uuid not null,
         was_created_at  timestamp with time zone default 'now()' not null,
         foreign key (comment_parent) references comment(id)
       );
 
+      create trigger tigger_comment_history_update
+        before update on comment_history for each row
+        execute procedure trigger_updated_at();
+
       create table experience_cross_comment (
         id          uuid primary key not null,
+        updated_at  timestamp with time zone default 'now()' not null,
         created_at  timestamp with time zone default 'now()' not null,
         deleted     boolean default 'FALSE' not null,
         experience  uuid not null,
@@ -271,6 +326,10 @@ module.exports = {
         foreign key (experience) references experience(id),
         foreign key (comment) references comment(id)
       );
+
+      create trigger tigger_experience_cross_comment_update
+        before update on experience_cross_comment for each row
+        execute procedure trigger_updated_at();
 
       create table fragment_type (
         id          uuid primary key not null,
@@ -320,8 +379,13 @@ module.exports = {
         foreign key (created_by) references account(id)
       );
 
+      create trigger tigger_fragment_update
+        before update on fragment for each row
+        execute procedure trigger_updated_at();
+
       create table fragment_cross_experience (
         id          uuid primary key not null,
+        updated_at  timestamp with time zone default 'now()' not null,
         created_at  timestamp with time zone default 'now()' not null,
         deleted     boolean default 'FALSE' not null,
         fragment    uuid not null,
@@ -330,31 +394,55 @@ module.exports = {
         foreign key (fragment) references fragment(id)
       );
 
+      create trigger tigger_fragment_cross_experience_update
+        before update on fragment_cross_experience for each row
+        execute procedure trigger_updated_at();
+
       create table fragment_linear_layout (
         id          uuid not null unique,
+        updated_at  timestamp with time zone default 'now()' not null,
+        created_at  timestamp with time zone default 'now()' not null,
         type        uuid not null,
         horizontal  boolean not null,
         primary key (id, type),
         foreign key (id, type) references fragment(id, type)
       );
 
+      create trigger tigger_fragment_linear_layout_update
+        before update on fragment_linear_layout for each row
+        execute procedure trigger_updated_at();
+
       create table fragment_relative_layout (
         id          uuid not null unique,
+        updated_at  timestamp with time zone default 'now()' not null,
+        created_at  timestamp with time zone default 'now()' not null,
         type        uuid not null,
         primary key (id, type),
         foreign key (id, type) references fragment(id, type)
       );
 
+      create trigger tigger_fragment_relative_layout_update
+        before update on fragment_relative_layout for each row
+        execute procedure trigger_updated_at();
+
       create table fragment_embed_video (
         id          uuid not null unique,
+        updated_at  timestamp with time zone default 'now()' not null,
+        created_at  timestamp with time zone default 'now()' not null,
         type        uuid not null,
         url         text not null,
         primary key (id, type),
         foreign key (id, type) references fragment(id, type)
       );
 
+      create trigger tigger_fragment_embed_video_update
+        before update on fragment_embed_video for each row
+        execute procedure trigger_updated_at();
+
       create table fragment_image_upload (
         id          uuid not null unique,
+        updated_at  timestamp with time zone default 'now()' not null,
+        created_at  timestamp with time zone default 'now()' not null,
         type        uuid not null,
         url         text not null,
         image_codec text not null,
@@ -362,8 +450,14 @@ module.exports = {
         foreign key (id, type) references fragment(id, type)
       );
 
+      create trigger tigger_fragment_image_upload_update
+        before update on fragment_image_upload for each row
+        execute procedure trigger_updated_at();
+
       create table fragment_audio_upload (
         id          uuid not null unique,
+        updated_at  timestamp with time zone default 'now()' not null,
+        created_at  timestamp with time zone default 'now()' not null,
         type        uuid not null,
         url         text not null,
         bitrate     integer not null,
@@ -371,16 +465,28 @@ module.exports = {
         foreign key (id, type) references fragment(id, type)
       );
 
+      create trigger tigger_fragment_audio_upload_update
+        before update on fragment_audio_upload for each row
+        execute procedure trigger_updated_at();
+
       create table fragment_link_preview (
         id          uuid not null unique,
+        updated_at  timestamp with time zone default 'now()' not null,
+        created_at  timestamp with time zone default 'now()' not null,
         type        uuid not null,
         url         text not null,
         primary key (id, type),
         foreign key (id, type) references fragment(id, type)
       );
 
+      create trigger tigger_fragment_link_preview_update
+        before update on fragment_link_preview for each row
+        execute procedure trigger_updated_at();
+
       create table fragment_code_snippet (
         id               uuid not null unique,
+        updated_at  timestamp with time zone default 'now()' not null,
+        created_at  timestamp with time zone default 'now()' not null,
         type             uuid not null,
         language         text not null,
         program          text not null,
@@ -388,12 +494,20 @@ module.exports = {
         foreign key (id, type) references fragment(id, type)
       );
 
+      create trigger tigger_fragment_code_snippet_update
+        before update on fragment_code_snippet for each row
+        execute procedure trigger_updated_at();
+
       create table app_token (
         id              text primary key not null,
         created_at      timestamp with time zone default 'now()' not null,
         updated_at      timestamp with time zone default 'now()' not null,
         refresh_token   text not null
       );
+
+      create trigger tigger_app_token_update
+        before update on app_token for each row
+        execute procedure trigger_updated_at();
     `);
   }
 };

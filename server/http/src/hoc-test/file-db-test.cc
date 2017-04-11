@@ -6,6 +6,7 @@
 #include <hoc-test/fixtures.h>
 #include <hoc/db/connection.h>
 #include <hoc/actions/account.h>
+#include <hoc/actions/file.h>
 
 using namespace std;
 using namespace hoc;
@@ -108,6 +109,126 @@ FIXTURE(member_can_complete_parts_and_view_completed) {
         EXPECT_EQ(res[i][2].as<int>(), i + 1);
       }
       w.commit();
+    }
+  });
+
+  delete_test_accounts();
+}
+
+FIXTURE(create_upload_promise_for_small_file) {
+  EXPECT_OK([]() {
+    actions::register_account("test@test.com", "password");
+    actions::confirm_account("test@test.com", "password");
+    auto c = db::member_connection("test@test.com", "password");
+    bool called = false;
+    auto file_id = actions::create_upload_promise(c, "name", 8000000, [&called]() {
+      called = true;
+      return "";
+    });
+    EXPECT_EQ(called, false);
+    pqxx::work w(*c);
+    auto files = w.exec(
+      "select id, name, bits, upload_id from file where id = " + w.quote(file_id)
+    );
+    EXPECT_EQ(files.size(), size_t(1));
+    EXPECT_EQ(files[0][0].as<string>(), file_id);
+    EXPECT_EQ(files[0][1].as<string>(), "name");
+    EXPECT_EQ(files[0][2].as<string>(), "8000000");
+    EXPECT_EQ(files[0][3].is_null(), true);
+    auto file_parts = w.exec(
+      "select bits, aws_part_number, pending "
+      "from file_part where file = " + w.quote(file_id) + " "
+      "order by aws_part_number asc"
+    );
+    EXPECT_EQ(file_parts.size(), size_t(1));
+    EXPECT_EQ(file_parts[0][0].as<string>(), "8000000");
+    EXPECT_EQ(file_parts[0][1].as<int>(), 1);
+    EXPECT_EQ(file_parts[0][2].as<bool>(), true);
+  });
+
+  delete_test_accounts();
+}
+
+FIXTURE(create_upload_promise_for_large_file) {
+  EXPECT_OK([]() {
+    actions::register_account("test@test.com", "password");
+    actions::confirm_account("test@test.com", "password");
+    auto c = db::member_connection("test@test.com", "password");
+    bool called = false;
+    auto file_id = actions::create_upload_promise(c, "name", 400000008, [&called]() {
+      called = true;
+      return "imanuploadid";
+    });
+    EXPECT_EQ(called, true);
+    pqxx::work w(*c);
+    auto files = w.exec(
+      "select id, name, bits, upload_id from file where id = " + w.quote(file_id)
+    );
+    EXPECT_EQ(files.size(), size_t(1));
+    EXPECT_EQ(files[0][0].as<string>(), file_id);
+    EXPECT_EQ(files[0][1].as<string>(), "name");
+    EXPECT_EQ(files[0][2].as<string>(), "400000008");
+    EXPECT_EQ(files[0][3].as<string>(), "imanuploadid");
+    auto file_parts = w.exec(
+      "select bits, aws_part_number, pending "
+      "from file_part where file = " + w.quote(file_id) + " "
+      "order by aws_part_number asc"
+    );
+    EXPECT_EQ(file_parts.size(), size_t(11));
+    for (int i = 0; i < 10; ++i) {
+      EXPECT_EQ(file_parts[i][0].as<string>(), "40000000");
+      EXPECT_EQ(file_parts[i][1].as<int>(), i + 1);
+      EXPECT_EQ(file_parts[i][2].as<bool>(), true);
+    }
+    EXPECT_EQ(file_parts[10][0].as<string>(), "8");
+    EXPECT_EQ(file_parts[10][1].as<int>(), 11);
+    EXPECT_EQ(file_parts[10][2].as<bool>(), true);
+  });
+
+  delete_test_accounts();
+}
+
+FIXTURE(cancel_upload_promise_for_small_file) {
+  EXPECT_OK([]() {
+    actions::register_account("test@test.com", "password");
+    actions::confirm_account("test@test.com", "password");
+    auto c = db::member_connection("test@test.com", "password");
+    auto file_id = actions::create_upload_promise(c, "name", 8000000, []() {
+      return "asdf";
+    });
+    bool called = false;
+    actions::cancel_upload_promise(c, file_id, [&called]() {
+      called = true;
+    });
+    pqxx::work w(*c);
+    auto file = w.exec("select status from file where id = " + w.quote(file_id));
+    auto parts = w.exec("select pending from file_part where file = " + w.quote(file_id));
+    EXPECT_EQ(file[0][0].as<string>(), "canceled");
+    EXPECT_EQ(parts[0][0].as<bool>(), false);
+    EXPECT_EQ(called, false);
+  });
+
+  delete_test_accounts();
+}
+
+FIXTURE(cancel_upload_promise_for_large_file) {
+  EXPECT_OK([]() {
+    actions::register_account("test@test.com", "password");
+    actions::confirm_account("test@test.com", "password");
+    auto c = db::member_connection("test@test.com", "password");
+    auto file_id = actions::create_upload_promise(c, "name", 40000008, []() {
+      return "asdf";
+    });
+    bool called = false;
+    actions::cancel_upload_promise(c, file_id, [&called]() {
+      called = true;
+    });
+    pqxx::work w(*c);
+    auto file = w.exec("select status from file where id = " + w.quote(file_id));
+    auto parts = w.exec("select pending from file_part where file = " + w.quote(file_id));
+    EXPECT_EQ(file[0][0].as<string>(), "canceled");
+    for (size_t i = 0; i < parts.size(); ++i) {
+      EXPECT_EQ(parts[i][0].as<bool>(), false);
     }
   });
 
