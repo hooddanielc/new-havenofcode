@@ -5,15 +5,40 @@ using namespace std;
 namespace hoc {
 namespace actions {
 
-string create_aws_multipart_upload() {
+string create_aws_multipart_upload(
+  const string &aws_region,
+  const string &aws_bucket,
+  const string &aws_key
+) {
   return "todo";
 }
 
-void cancel_aws_multipart_upload() {
+void cancel_aws_multipart_upload(
+  const string &aws_region,
+  const string &aws_bucket,
+  const string &aws_key,
+  const string &upload_id
+) {
   // todo
 }
 
-void complete_aws_multipart_upload() {
+std::string complete_aws_file_part_promise(
+  const string &aws_region,
+  const string &aws_bucket,
+  const string &aws_key,
+  const string &upload_id,
+  char *data
+) {
+  return "todo";
+}
+
+void complete_aws_multipart_upload(
+  const string &aws_region,
+  const string &aws_bucket,
+  const string &aws_key,
+  const string &upload_id,
+  vector<string> &keys
+) {
   // todo
 }
 
@@ -21,25 +46,30 @@ std::string create_upload_promise(
   std::shared_ptr<pqxx::connection> db,
   const string &name,
   int64_t bits,
-  const function<string()> &fn
+  const function<string(const string &, const string &, const string &)> &fn
 ) {
-  // calculate how many parts 
+  // insert
+  pqxx::work w(*db);
+  string uuid = w.exec("select uuid_generate_v4()")[0][0].as<string>();
+  string user = w.exec("select current_account_id()")[0][0].as<string>();
+  string aws_region = "us-west-2";
+  string aws_bucket = "havenofcode";
+  string aws_key = "/" + user + "/" + uuid;
+  // calculate how many parts
   // will need to be uploaded. each
   // part must be at least 5mb
   long double part_size = 40000000;
   int num_parts = ceil(bits / part_size);
   string upload_id("");
   if (num_parts > 1) {
-    upload_id = fn();
+    upload_id = fn(aws_region, aws_bucket, aws_key);
   }
-
-  // insert
-  pqxx::work w(*db);
-  string uuid = w.exec("select uuid_generate_v4()")[0][0].as<string>();
-  string user = w.exec("select current_account_id()")[0][0].as<string>();
+  // track the aws file part upload
   stringstream ss;
-  ss << "insert into file (aws_key, bits, name, upload_id) values ("
-     << w.quote("/" + user + "/" + uuid) << ","
+  ss << "insert into file (aws_region, aws_bucket, aws_key, bits, name, upload_id) values ("
+     << w.quote(aws_region) << ","
+     << w.quote(aws_bucket) << ","
+     << w.quote(aws_key) << ","
      << w.esc(to_string(bits)) << ","
      << w.quote(name) << ","
      << ((num_parts > 1) ? w.quote(upload_id) : "NULL")
@@ -62,11 +92,11 @@ std::string create_upload_promise(
 void cancel_upload_promise(
   std::shared_ptr<pqxx::connection> db,
   const std::string &id,
-  const std::function<void()> &fn
+  const std::function<void(const string &, const string &, const string &, const string &)> &fn
 ) {
   pqxx::work w(*db);
   stringstream ss;
-  ss << "select status, bits from file where id = " << w.quote(id);
+  ss << "select status, aws_region, aws_bucket, aws_key, upload_id from file where id = " << w.quote(id);
   auto file_row = w.exec(ss);
   ss.str("");
   ss.clear();
@@ -80,7 +110,12 @@ void cancel_upload_promise(
   ss << "select count(*) from file_part where file = " << w.quote(id);
   auto part_count = w.exec(ss)[0][0].as<int>();
   if (part_count > 1) {
-    fn();
+    fn(
+      file_row[0][1].as<string>(),
+      file_row[0][2].as<string>(),
+      file_row[0][3].as<string>(),
+      file_row[0][4].as<string>()
+    );
   }
   ss.str("");
   ss.clear();
@@ -94,10 +129,19 @@ void cancel_upload_promise(
   w.commit();
 }
 
+void complete_file_part_promise(
+  std::shared_ptr<pqxx::connection> db,
+  const string &file_part_id,
+  char *data,
+  const function<void(const string &, const string &, const string &, const string &, char *)> &fn
+) {
+  // todo
+}
+
 void complete_upload_promise(
   std::shared_ptr<pqxx::connection> db,
-  const std::string &id,
-  const std::function<void()> &fn
+  const string &id,
+  const function<string(const string &, const string &, const string &, const string &, vector<string> &)> &fn
 ) {
   // todo
 }

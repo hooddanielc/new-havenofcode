@@ -158,6 +158,7 @@ module.exports = {
         upload_id   text,
         aws_key     text default '/' || current_account_id() || '/' || uuid_generate_v4(),
         aws_region  text default 'us-west-2' not null,
+        aws_bucket  text default 'havenofcode' not null,
         bits        bigint not null,
         status      file_state default 'pending' not null,
         progress    real default 0,
@@ -226,9 +227,25 @@ module.exports = {
         using (created_by = current_account_id() and deleted = 'FALSE')
         with check (
           created_by = current_account_id() and
-          file is not null and
-          updated_at is not null
+          file is not null
         );
+
+      create table file_part_promise (
+        id              uuid primary key default uuid_generate_v4() not null,
+        created_at      timestamp with time zone default 'now()' not null,
+        created_by      uuid default current_account_id() not null,
+        foreign key     (id) references file_part(id)
+      );
+
+      grant all on file_part_promise to admins;
+      grant insert, select, delete on file_part_promise to members;
+      alter table file_part_promise enable row level security;
+      create policy file_part_promise_admin on file_part_promise to admins
+        using (true)
+        with check (true);
+      create policy file_part_promise_members on file_part_promise to members
+        using (created_by = current_account_id())
+        with check (created_by = current_account_id());
 
       create table experience (
         id          uuid primary key default uuid_generate_v4() not null,

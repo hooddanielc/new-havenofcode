@@ -121,7 +121,7 @@ FIXTURE(create_upload_promise_for_small_file) {
     actions::confirm_account("test@test.com", "password");
     auto c = db::member_connection("test@test.com", "password");
     bool called = false;
-    auto file_id = actions::create_upload_promise(c, "name", 8000000, [&called]() {
+    auto file_id = actions::create_upload_promise(c, "name", 8000000, [&called](const string &, const string &, const string &) {
       called = true;
       return "";
     });
@@ -155,20 +155,25 @@ FIXTURE(create_upload_promise_for_large_file) {
     actions::confirm_account("test@test.com", "password");
     auto c = db::member_connection("test@test.com", "password");
     bool called = false;
-    auto file_id = actions::create_upload_promise(c, "name", 400000008, [&called]() {
+    string generated_key("");
+    auto file_id = actions::create_upload_promise(c, "name", 400000008, [&called, &generated_key](const string &region, const string &bucket, const string &key) {
       called = true;
+      EXPECT_EQ(region, "us-west-2");
+      EXPECT_EQ(bucket, "havenofcode");
+      generated_key = key;
       return "imanuploadid";
     });
     EXPECT_EQ(called, true);
     pqxx::work w(*c);
     auto files = w.exec(
-      "select id, name, bits, upload_id from file where id = " + w.quote(file_id)
+      "select id, name, bits, upload_id, aws_key from file where id = " + w.quote(file_id)
     );
     EXPECT_EQ(files.size(), size_t(1));
     EXPECT_EQ(files[0][0].as<string>(), file_id);
     EXPECT_EQ(files[0][1].as<string>(), "name");
     EXPECT_EQ(files[0][2].as<string>(), "400000008");
     EXPECT_EQ(files[0][3].as<string>(), "imanuploadid");
+    EXPECT_EQ(files[0][4].as<string>(), generated_key);
     auto file_parts = w.exec(
       "select bits, aws_part_number, pending "
       "from file_part where file = " + w.quote(file_id) + " "
@@ -193,11 +198,11 @@ FIXTURE(cancel_upload_promise_for_small_file) {
     actions::register_account("test@test.com", "password");
     actions::confirm_account("test@test.com", "password");
     auto c = db::member_connection("test@test.com", "password");
-    auto file_id = actions::create_upload_promise(c, "name", 8000000, []() {
+    auto file_id = actions::create_upload_promise(c, "name", 8000000, [](const string &, const string &, const string &) {
       return "asdf";
     });
     bool called = false;
-    actions::cancel_upload_promise(c, file_id, [&called]() {
+    actions::cancel_upload_promise(c, file_id, [&called](const string &, const string &, const string &, const string &) {
       called = true;
     });
     pqxx::work w(*c);
@@ -216,11 +221,18 @@ FIXTURE(cancel_upload_promise_for_large_file) {
     actions::register_account("test@test.com", "password");
     actions::confirm_account("test@test.com", "password");
     auto c = db::member_connection("test@test.com", "password");
-    auto file_id = actions::create_upload_promise(c, "name", 40000008, []() {
+    auto file_id = actions::create_upload_promise(c, "name", 40000008, [](const string &, const string &, const string &) {
       return "asdf";
     });
     bool called = false;
-    actions::cancel_upload_promise(c, file_id, [&called]() {
+    pqxx::work w2(*c);
+    auto generated_key = w2.exec("select aws_key from file where id = " + w2.quote(file_id))[0][0].as<string>();
+    w2.commit();
+    actions::cancel_upload_promise(c, file_id, [&called, &generated_key](const string &region, const string &bucket, const string &key, const string &upload_id) {
+      EXPECT_EQ(upload_id, "asdf");
+      EXPECT_EQ(region, "us-west-2");
+      EXPECT_EQ(bucket, "havenofcode");
+      EXPECT_EQ(key, generated_key);
       called = true;
     });
     pqxx::work w(*c);
