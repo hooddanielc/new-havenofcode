@@ -27,7 +27,8 @@ std::string complete_aws_file_part_promise(
   const string &aws_bucket,
   const string &aws_key,
   const string &upload_id,
-  char *data
+  const int part_number,
+  const vector<uint8_t> &
 ) {
   return "todo";
 }
@@ -37,7 +38,7 @@ void complete_aws_multipart_upload(
   const string &aws_bucket,
   const string &aws_key,
   const string &upload_id,
-  vector<string> &keys
+  const vector<string> &keys
 ) {
   // todo
 }
@@ -58,6 +59,7 @@ std::string create_upload_promise(
   // calculate how many parts
   // will need to be uploaded. each
   // part must be at least 5mb
+  // and last part can be any size
   long double part_size = 40000000;
   int num_parts = ceil(bits / part_size);
   string upload_id("");
@@ -129,19 +131,75 @@ void cancel_upload_promise(
   w.commit();
 }
 
+void start_file_part_promise(
+  shared_ptr<pqxx::connection> db,
+  const std::string &id
+) {
+  try {
+    pqxx::work w(*db);
+    stringstream ss;
+    ss << "insert into file_part_promise (id) values (" << w.quote(id) << ")";
+    w.exec(ss);
+    w.commit();
+  } catch (const std::exception &e) {
+    throw runtime_error("promise taken");
+  }
+}
+
 void complete_file_part_promise(
   std::shared_ptr<pqxx::connection> db,
   const string &file_part_id,
-  char *data,
-  const function<void(const string &, const string &, const string &, const string &, char *)> &fn
+  const vector<uint8_t> &data,
+  const function<string(
+    const string &,
+    const string &,
+    const string &,
+    const string &,
+    const int,
+    const vector<uint8_t> &
+  )> &fn
 ) {
-  // todo
+  pqxx::work w(*db);
+  stringstream ss;
+  ss << "select file_part_promise.id, file_part.bits, file_part.aws_part_number, "
+     << "file.aws_region, file.aws_bucket, file.aws_key, file.upload_id "
+     << "from file, file_part, file_part_promise "
+     << "where file_part_promise.id = file_part.id and "
+     << "file_part.file = file.id and "
+     << "file_part.id = " << w.quote(file_part_id);
+
+  auto file_part = w.exec(ss);
+  if (file_part.size() != 1) {
+    throw runtime_error("promise not started");
+  }
+
+  auto bits = file_part[0][1].as<string>();
+  auto part_number = file_part[0][2].as<int>();
+  auto aws_region = file_part[0][3].as<string>();
+  auto aws_bucket = file_part[0][4].as<string>();
+  auto aws_key = file_part[0][5].as<string>();
+  auto aws_upload_id = file_part[0][6].is_null() ? "" : file_part[0][6].as<string>();
+  auto etag = fn(aws_region, aws_bucket, aws_key, aws_upload_id, part_number, data);
+
+  ss.str("");
+  ss.clear();
+  ss << "update file_part set "
+     << "aws_etag = " << ((etag == "") ? "NULL" : w.quote(etag)) << ", "
+     << "pending = 'FALSE'";
+  w.exec(ss);
+  w.commit();
 }
 
 void complete_upload_promise(
   std::shared_ptr<pqxx::connection> db,
   const string &id,
-  const function<string(const string &, const string &, const string &, const string &, vector<string> &)> &fn
+  const function<string(
+    const string &,
+    const string &,
+    const string &,
+    const string &,
+    const vector<string> &
+  )> &fn
 ) {
   // todo
 }

@@ -247,6 +247,136 @@ FIXTURE(cancel_upload_promise_for_large_file) {
   delete_test_accounts();
 }
 
+FIXTURE(complete_file_part_promise_for_small_file) {
+  EXPECT_OK([]() {
+    actions::register_account("test@test.com", "password");
+    actions::confirm_account("test@test.com", "password");
+    auto c = db::member_connection("test@test.com", "password");
+    auto file_id = actions::create_upload_promise(c, "name", 8000000, [](const string &, const string &, const string &) {
+      return "asdf";
+    });
+    char data[1000000];
+    vector<uint8_t> megabyte(data, data + sizeof(data));
+
+    pqxx::work w1(*c);
+    auto file_part = w1.exec("select id from file_part where file = " + w1.quote(file_id));
+    auto generated_key = w1.exec("select aws_key from file where id = " + w1.quote(file_id))[0][0].as<string>();
+    w1.commit();
+    auto file_part_id = file_part[0][0].as<string>();
+    EXPECT_FAIL([&megabyte, c, &file_part_id]() {
+      actions::complete_file_part_promise(
+        c,
+        file_part_id,
+        megabyte,
+        [](
+          const string &,
+          const string &,
+          const string &,
+          const string &,
+          const int,
+          const vector<uint8_t> &
+        ) {
+          return ""; // non multipart upload returns empty string
+        }
+      );
+    });
+    actions::start_file_part_promise(c, file_part_id);
+    actions::complete_file_part_promise(
+      c,
+      file_part_id,
+      megabyte,
+      [&generated_key](
+        const string &region,
+        const string &bucket,
+        const string &key,
+        const string &upload_id,
+        const int part_number,
+        const vector<uint8_t> &data
+      ) {
+        EXPECT_EQ(region, "us-west-2");
+        EXPECT_EQ(bucket, "havenofcode");
+        EXPECT_EQ(key, generated_key);
+        EXPECT_EQ(upload_id, ""); // small files do not have an upload_id
+        EXPECT_EQ(part_number, 1);
+        EXPECT_EQ(data.size(), size_t(1000000));
+        return "";
+      }
+    );
+
+    pqxx::work w2(*c);
+    auto fp = w2.exec("select aws_etag, pending from file_part where id = " + w2.quote(file_part_id));
+    EXPECT_EQ(fp[0][0].is_null(), true);
+    EXPECT_EQ(fp[0][1].as<bool>(), false);
+  });
+
+  delete_test_accounts();
+}
+
+FIXTURE(complete_file_part_promise_for_large_file) {
+  EXPECT_OK([]() {
+    actions::register_account("test@test.com", "password");
+    actions::confirm_account("test@test.com", "password");
+    auto c = db::member_connection("test@test.com", "password");
+    auto file_id = actions::create_upload_promise(c, "name", 40000008, [](const string &, const string &, const string &) {
+      return "asdf";
+    });
+    char data[5000000];
+    vector<uint8_t> megabyte(data, data + sizeof(data));
+
+    pqxx::work w1(*c);
+    auto file_part = w1.exec("select id from file_part where file = " + w1.quote(file_id));
+    auto generated_key = w1.exec("select aws_key from file where id = " + w1.quote(file_id))[0][0].as<string>();
+    w1.commit();
+    auto file_part_id = file_part[0][0].as<string>();
+    EXPECT_FAIL([&megabyte, c, &file_part_id]() {
+      actions::complete_file_part_promise(
+        c,
+        file_part_id,
+        megabyte,
+        [](
+          const string &,
+          const string &,
+          const string &,
+          const string &,
+          const int,
+          const vector<uint8_t> &
+        ) {
+          return "";
+        }
+      );
+    });
+    actions::start_file_part_promise(c, file_part_id);
+    actions::complete_file_part_promise(
+      c,
+      file_part_id,
+      megabyte,
+      [&generated_key](
+        const string &region,
+        const string &bucket,
+        const string &key,
+        const string &upload_id,
+        const int part_number,
+        const vector<uint8_t> &data
+      ) {
+        EXPECT_EQ(region, "us-west-2");
+        EXPECT_EQ(bucket, "havenofcode");
+        EXPECT_EQ(key, generated_key);
+        EXPECT_EQ(upload_id, "asdf"); // small files do not have an upload_id
+        EXPECT_EQ(part_number, 1);
+        EXPECT_EQ(data.size(), size_t(5000000));
+        return "aws_etag";
+      }
+    );
+
+    pqxx::work w2(*c);
+    auto fp = w2.exec("select aws_etag, pending from file_part where id = " + w2.quote(file_part_id));
+    EXPECT_EQ(fp[0][0].as<string>(), "aws_etag");
+    EXPECT_EQ(fp[0][1].as<bool>(), false);
+  });
+
+  delete_test_accounts();
+}
+
 int main(int argc, char *argv[]) {
   return dj::lick::main(argc, argv);
 }
