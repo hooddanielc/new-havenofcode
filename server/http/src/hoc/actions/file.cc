@@ -179,7 +179,18 @@ void complete_file_part_promise(
   auto aws_bucket = file_part[0][4].as<string>();
   auto aws_key = file_part[0][5].as<string>();
   auto aws_upload_id = file_part[0][6].is_null() ? "" : file_part[0][6].as<string>();
-  auto etag = fn(aws_region, aws_bucket, aws_key, aws_upload_id, part_number, data);
+  string etag;
+
+  try {
+    etag = fn(aws_region, aws_bucket, aws_key, aws_upload_id, part_number, data);
+  } catch (const exception &e) {
+    ss.str("");
+    ss.clear();
+    ss << "delete from file_part_promise where id = " << w.quote(file_part[0][0].as<string>());
+    w.exec(ss);
+    w.commit();
+    throw e;
+  }
 
   ss.str("");
   ss.clear();

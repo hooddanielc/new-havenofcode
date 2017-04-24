@@ -382,6 +382,122 @@ FIXTURE(complete_file_part_promise_for_large_file) {
   delete_test_accounts();
 }
 
+FIXTURE(failed_file_part_promise_rolls_back) {
+  EXPECT_OK([]() {
+    actions::register_account("test@test.com", "password");
+    actions::confirm_account("test@test.com", "password");
+    auto c = db::member_connection("test@test.com", "password");
+    auto file_id = actions::create_upload_promise(c, "name", 5000001, [](const string &, const string &, const string &) {
+      return "asdf";
+    });
+    char data[5000001];
+    vector<uint8_t> megabyte(data, data + sizeof(data));
+
+    pqxx::work w1(*c);
+    auto file_parts = w1.exec("select id, aws_part_number from file_part where file = " + w1.quote(file_id) + " order by aws_part_number asc");
+    auto generated_key = w1.exec("select aws_key from file where id = " + w1.quote(file_id))[0][0].as<string>();
+    w1.commit();
+    for (size_t i = 0; i < file_parts.size(); ++i) {
+      auto file_part_id = file_parts[i][0].as<string>();
+      auto file_part_number = file_parts[i][1].as<int>();
+      EXPECT_FAIL([&megabyte, c, &file_part_id]() {
+        actions::complete_file_part_promise(
+          c,
+          file_part_id,
+          megabyte,
+          [](
+            const string &,
+            const string &,
+            const string &,
+            const string &,
+            const int,
+            const vector<uint8_t> &
+          ) {
+            return "";
+          }
+        );
+      });
+
+      actions::start_file_part_promise(c, file_part_id);
+
+      EXPECT_FAIL([&]() {
+        actions::complete_file_part_promise(
+          c,
+          file_part_id,
+          megabyte,
+          [&generated_key, &file_part_number](
+            const string &,
+            const string &,
+            const string &,
+            const string &,
+            const int,
+            const vector<uint8_t> &
+          ) {
+            throw runtime_error("this should autoremove promise row");
+            return "aws_etag";
+          }
+        );
+      });
+
+      pqxx::work wp(*c);
+      auto promise = wp.exec("select count(*) from file_part_promise where id = " + wp.quote(file_part_id));
+      wp.commit();
+      EXPECT_EQ(promise[0][0].as<int>(), 0);
+
+      // promise needs to be started again
+      EXPECT_FAIL([&]() {
+        actions::complete_file_part_promise(
+          c,
+          file_part_id,
+          megabyte,
+          [&generated_key, &file_part_number](
+            const string &,
+            const string &,
+            const string &,
+            const string &,
+            const int,
+            const vector<uint8_t> &
+          ) {
+            return "aws_etag";
+          }
+        );
+      });
+
+      actions::start_file_part_promise(c, file_part_id);
+      actions::complete_file_part_promise(
+        c,
+        file_part_id,
+        megabyte,
+        [&generated_key, &file_part_number](
+          const string &region,
+          const string &bucket,
+          const string &key,
+          const string &upload_id,
+          const int part_number,
+          const vector<uint8_t> &data
+        ) {
+          EXPECT_EQ(region, "us-west-2");
+          EXPECT_EQ(bucket, "havenofcode");
+          EXPECT_EQ(key, generated_key);
+          EXPECT_EQ(upload_id, "asdf"); // small files do not have an upload_id
+          EXPECT_EQ(part_number, file_part_number);
+          EXPECT_EQ(data.size(), size_t(5000001));
+          return "aws_etag";
+        }
+      );
+    }
+
+    pqxx::work w2(*c);
+    auto fps = w2.exec("select aws_etag, pending from file_part where file = " + w2.quote(file_id) + " order by aws_part_number asc");
+    for (size_t i = 0; i < fps.size(); ++i) {
+      EXPECT_EQ(fps[i][0].as<string>(), "aws_etag");
+      EXPECT_EQ(fps[i][1].as<bool>(), false);
+    }
+  });
+
+  delete_test_accounts();
+}
+
 FIXTURE(complete_entire_file_promise_for_small_file) {
   EXPECT_OK([]() {
     actions::register_account("test@test.com", "password");
