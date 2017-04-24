@@ -193,7 +193,7 @@ void complete_file_part_promise(
 void complete_upload_promise(
   std::shared_ptr<pqxx::connection> db,
   const string &id,
-  const function<string(
+  const function<void(
     const string &,
     const string &,
     const string &,
@@ -201,7 +201,41 @@ void complete_upload_promise(
     const vector<string> &
   )> &fn
 ) {
-  // todo
+  pqxx::work w(*db);
+  stringstream ss;
+  ss << "select status, aws_region, aws_bucket, aws_key, upload_id from file where id = " << w.quote(id);
+  auto file = w.exec(ss);
+  if (file[0][0].as<string>() != "pending") {
+    throw runtime_error("file status is " + file[0][0].as<string>());
+  }
+  ss.str("");
+  ss.clear();
+  ss << "select pending, aws_etag from file_part "
+     << "where file = " << w.quote(id) << " order by aws_part_number asc";
+  auto parts = w.exec(ss);
+  vector<string> keys;
+  if (parts.size() > 1) {
+    for (size_t i = 0; i < parts.size(); ++i) {
+      if (parts[i][0].as<bool>()) {
+        // file part is still pending
+        // cannot continue
+        throw runtime_error("upload all file parts before calling complete");
+      }
+      keys.emplace_back(parts[i][1].as<string>());
+    }
+    fn(
+      file[0][1].as<string>(),
+      file[0][2].as<string>(),
+      file[0][3].as<string>(),
+      file[0][4].is_null() ? "" : file[0][4].as<string>(),
+      keys
+    );
+  }
+  ss.str("");
+  ss.clear();
+  ss << "update file set status = 'complete' where id = " << w.quote(id);
+  w.exec(ss);
+  w.commit();
 }
 
 } // actions
