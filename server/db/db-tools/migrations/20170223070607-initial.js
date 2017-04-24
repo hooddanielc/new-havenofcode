@@ -159,7 +159,7 @@ module.exports = {
         aws_key     text default '/' || current_account_id() || '/' || uuid_generate_v4(),
         aws_region  text default 'us-west-2' not null,
         aws_bucket  text default 'havenofcode' not null,
-        bits        bigint not null,
+        bytes       bigint not null,
         status      file_state default 'pending' not null,
         progress    real default 0,
         foreign key (created_by) references account(id)
@@ -196,7 +196,7 @@ module.exports = {
         created_at      timestamp with time zone default 'now()' not null,
         updated_at      timestamp with time zone default 'now()' not null,
         deleted         boolean default 'FALSE' not null,
-        bits            int not null check (bits > 0),
+        bytes           int not null check (bytes > 0),
         aws_etag        text,
         aws_part_number int not null check (aws_part_number > 0),
         pending         boolean default 'TRUE',

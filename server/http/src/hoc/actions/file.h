@@ -47,7 +47,7 @@ void complete_aws_multipart_upload(
 std::string create_upload_promise(
   std::shared_ptr<pqxx::connection> db,
   const std::string &name,
-  int64_t bits,
+  int64_t bytes,
   const std::function<std::string(const std::string &, const std::string &, const std::string &)> &fn = create_aws_multipart_upload
 );
 

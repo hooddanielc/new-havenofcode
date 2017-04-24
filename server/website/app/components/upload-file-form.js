@@ -13,7 +13,7 @@ export default Ember.Component.extend({
     for (let i = 0; i < files.length; ++i) {
       result.push(this.get('store').createRecord('file', {
         name: files[i].name,
-        bits: files[i].size * 8,
+        bytes: files[i].size,
         type: files[i].type
       }));
     }
@@ -28,7 +28,7 @@ export default Ember.Component.extend({
 
       this.get('selectedFiles').forEach((record) => {
         console.log(record.get('name'));
-        console.log(record.get('bits'));
+        console.log(record.get('bytes'));
         console.log(record.get('type'));
         this.get('queue').pushObject(record);
         promises.push(record.save());

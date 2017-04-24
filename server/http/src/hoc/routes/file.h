@@ -45,7 +45,7 @@ public:
       pqxx::work w(*session->db);
       std::stringstream ss;
       ss << "select id, created_at, updated_at, created_by, aws_key, "
-         << "aws_region, bits, status, progress from file where id is not null ";
+         << "aws_region, bytes, status, progress from file where id is not null ";
 
       if (created_by != "") {
         ss << "and created_by = " << w.quote(created_by) << " ";
@@ -63,7 +63,7 @@ public:
         user["createdBy"] = result[i][3].as<std::string>();
         user["awsKey"] = result[i][4].as<std::string>();
         user["awsRegion"] = result[i][5].as<std::string>();
-        user["bits"] = result[i][6].as<std::string>();
+        user["bytes"] = result[i][6].as<std::string>();
         user["status"] = result[i][7].as<std::string>();
         user["progress"] = result[i][8].as<std::string>();
         files.emplace_back(std::move(user));
@@ -102,11 +102,11 @@ public:
         return route_t<T>::fail_with_error(req, "file object required");
       }
 
-      std::string bits("");
-      if (!json["file"].contains("bits")) {
-        return route_t<T>::fail_with_error(req, "bits property required in file object");
+      std::string bytes("");
+      if (!json["file"].contains("bytes")) {
+        return route_t<T>::fail_with_error(req, "bytes property required in file object");
       } else {
-        bits = json["file"]["bits"].as<std::string>();
+        bytes = json["file"]["bytes"].as<std::string>();
       }
 
       std::string name("unnamed");
@@ -116,11 +116,11 @@ public:
 
       pqxx::work w(*session->db);
       std::stringstream ss;
-      ss << "insert into file (bits, name) values ("
-         << w.esc(bits) << ","
+      ss << "insert into file (bytes, name) values ("
+         << w.esc(bytes) << ","
          << w.quote(name) << ") returning "
          << "id, created_by, created_at, updated_at, name, aws_key, aws_region, "
-         << "bits, status, progress";
+         << "bytes, status, progress";
 
       try {
         auto res = w.exec(ss);
@@ -134,7 +134,7 @@ public:
         json["files"]["name"] = res[0][4].as<std::string>();
         json["files"]["awsKey"] = res[0][5].as<std::string>();
         json["files"]["awsRegion"] = res[0][6].as<std::string>();
-        json["files"]["bits"] = res[0][7].as<std::string>();
+        json["files"]["bytes"] = res[0][7].as<std::string>();
         json["files"]["status"] = res[0][8].as<std::string>();
         json["files"]["progress"] = res[0][9].as<std::string>();
         route_t<T>::send_json(req, json, 200);

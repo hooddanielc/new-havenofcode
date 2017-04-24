@@ -7,7 +7,7 @@ export default DS.Model.extend({
   updatedAt: DS.attr('date'),
   awsKey: DS.attr('string'),
   awsRegion: DS.attr('string'),
-  bits: DS.attr('string'),
+  bytes: DS.attr('string'),
   status: DS.attr('string'),
   progress: DS.attr('number'),
   type: DS.attr('string')
