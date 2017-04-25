@@ -23,23 +23,29 @@ export default Ember.Component.extend({
 
   actions: {
     upload: function () {
-      this.set('savingInitialPromise', true);
-      const promises = [];
+      const files = this.$('input[type="file"]')[0].files;
+      window.files = files;
 
-      this.get('selectedFiles').forEach((record) => {
-        console.log(record.get('name'));
-        console.log(record.get('bytes'));
-        console.log(record.get('type'));
-        this.get('queue').pushObject(record);
-        promises.push(record.save());
+      if (files[0].size < 5000000) {
+        throw new Error('choose a file that is at least five megabytes');
+      }
+
+      var fd = new FormData();
+      fd.append('fname', 'arch.iso');
+      fd.append('data1', files[0].slice(0, 5000000));
+      fd.append('data2', files[0].slice(0, 5000000));
+      console.log('uploading 5 megabyte file');
+      Ember.$.ajax({
+        type: 'POST',
+        url: '/api/echo',
+        data: fd,
+        processData: false,
+        contentType: false
+      }).done(function(data) {
+        console.log(data);
       });
 
-      return Ember.RSVP.Promise.all(promises).then(() => {
-        this.set('savingInitialPromise', false);
-      }).catch((err) => {
-        this.set('savingInitialPromise', false);
-        console.log(err);
-      });
+      console.log(files);
     }
   }
 });

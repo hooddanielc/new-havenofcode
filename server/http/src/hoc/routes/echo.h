@@ -20,8 +20,8 @@ namespace hoc {
 
         str->append("\n\n");
 
-        req.on_data([str](const std::string &data) {
-          str->append(data);
+        req.on_data([str](const std::vector<uint8_t> &data) {
+          str->append(data.begin(), data.end());
         });
 
         req.on_end([&, str]() {

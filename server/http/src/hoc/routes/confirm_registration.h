@@ -13,8 +13,8 @@ namespace hoc {
       void post(T &req, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &session) override {
         auto str = new std::string();
 
-        req.on_data([str](const std::string &data) {
-          str->append(data);
+        req.on_data([str](const std::vector<uint8_t> &data) {
+          str->append(data.begin(), data.end());
         });
 
         req.on_end([&, str, session]() {

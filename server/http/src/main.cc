@@ -21,49 +21,25 @@ static void ngx_http_sample_put_handler(ngx_http_request_t *r) {
   req_t *request_wrapper = reinterpret_cast<req_t*>(ngx_http_get_module_ctx(r, current_module));
 
   if (r->request_body->temp_file == NULL) {
-    /*
-     * The entire request body is available in the list
-     * of buffers pointed by r->request_body->bufs.
-     *
-     * The list can have a maixmum of two buffers. One
-     * buffer contains the request body that was pre-read
-     * along with the request headers. The other buffer contains
-     * the rest of the request body. The maximum size of the
-     * buffer is controlled by 'client_body_buffer_size' directive.
-     * If the request body cannot be contained within these two
-     * buffers, the entire body  is writtin to the temp file and
-     * the buffers are cleared.
-     */
+    // request body is less than client_body_buffer_size
+    // defined in config
     ngx_chain_t *cl = r->request_body->bufs;
 
     while (cl != NULL) {
       ngx_buf_t *buf = cl->buf;
-
-      std::string data{
-        reinterpret_cast<char*>(buf->pos),
-        static_cast<long unsigned int>(buf->last - buf->pos)
-      };
-
+      vector<uint8_t> data(buf->start, buf->last);
       request_wrapper->emit_data(data);
       cl = cl->next;
     }
   } else {
-    // The entire request body is available in the temporary file.
-    size_t ret;
-    size_t offset = 0;
-    unsigned char data[4096];
+    // the file exceeds in client_body_buffer_size.
+    // do something with file path
+    string file_path{
+      reinterpret_cast<char*>(r->request_body->temp_file->file.name.data),
+      static_cast<long unsigned int>(r->request_body->temp_file->file.name.len)
+    };
 
-    while ((ret = ngx_read_file(&r->request_body->temp_file->file, data, 4096, offset)) > 0) {
-      cout << "Got a file" << endl;
-      // if (write(fd, data, ret) < 0) {
-      //   ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to allocate response buffer.");
-      //   ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
-      //   close(fd);
-      //   return;
-      // }
-
-      offset = offset + ret;
-    }
+    request_wrapper->emit_file(file_path);
   }
 
   // we are done reading request
@@ -124,7 +100,6 @@ static ngx_int_t ngx_hoc_interface_on_http_request(ngx_http_request_t *r) {
   rc = ngx_http_read_client_request_body(r, ngx_http_sample_put_handler);
 
   if (rc >= NGX_HTTP_SPECIAL_RESPONSE) {
-    cout << "uhm special" << endl;
     return rc;
   } else if (rc == NGX_AGAIN) {
     return NGX_DONE;

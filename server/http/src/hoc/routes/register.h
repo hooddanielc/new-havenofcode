@@ -17,8 +17,8 @@ namespace hoc {
       void post(T &req, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &) override {
         auto str = new std::string("");
 
-        req.on_data([str](const std::string &data) mutable {
-          str->append(data);
+        req.on_data([str](const std::vector<uint8_t> &data) mutable {
+          str->append(data.begin(), data.end());
         });
 
         req.on_end([&, str]() mutable {
