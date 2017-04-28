@@ -85,6 +85,9 @@ ENV HOC_NOREPLY_EMAIL noreply@havenofcode.com
 ENV HOC_AWS_KEY XXXXXXXX
 ENV HOC_AWS_SECRET XXXXXXXX
 
+# should uploads be stored locally? 1 = true 0 = false
+ENV HOC_MOCK_S3_UPLOADS 1
+
 # create place for nginx logs to live
 RUN mkdir $HOME/logs
 

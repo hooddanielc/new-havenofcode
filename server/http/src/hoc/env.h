@@ -20,6 +20,7 @@ namespace hoc {
       const char *anonymous_pass;
       const char *aws_key;
       const char *aws_secret;
+      const bool mock_s3_uploads;
 
       env_t():
         host(std::getenv("HOC_DOMAIN")),
@@ -33,7 +34,8 @@ namespace hoc {
         anonymous_user("anonymous"),
         anonymous_pass("password"),
         aws_key(std::getenv("HOC_AWS_KEY")),
-        aws_secret(std::getenv("HOC_AWS_SECRET")) {};
+        aws_secret(std::getenv("HOC_AWS_SECRET")),
+        mock_s3_uploads(std::string(std::getenv("HOC_MOCK_S3_UPLOADS")) == "1"){};
   
     private:
       env_t(env_t &&) = delete;
