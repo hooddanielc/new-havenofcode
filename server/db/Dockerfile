@@ -63,6 +63,6 @@ RUN  pg_ctl -w start -D $HOME/data && \
 EXPOSE 5432
 
 # Allow backup
-VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
+VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql", "/root/data"]
 
 CMD postgres -D $HOME/data
