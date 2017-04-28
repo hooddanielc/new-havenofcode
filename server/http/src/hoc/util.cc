@@ -120,4 +120,54 @@ namespace hoc {
 
     return bytes;
   }
+
+  string camelify(string &str) {
+    for (auto it = str.begin(); it != str.end(); ++it) {
+      if (*it == '_') {
+        str.erase(it);
+        *it = toupper(*(it));
+      }
+    }
+    return str;
+  }
+
+  // convert postgres result to json array
+  dj::json_t to_json(const pqxx::result &result) {
+    dj::json_t::array_t json;
+
+    for (pqxx::tuple::size_type y = 0; y < result.size(); ++y) {
+      auto obj = dj::json_t::empty_object;
+
+      for (pqxx::tuple::size_type x = 0; x < result.columns(); ++x) {
+        string name(result.column_name(x));
+        camelify(name);
+
+        if (result[y][x].is_null()) {
+          obj[name] = dj::json_t::null;
+          break;
+        }
+
+        switch (result[y][x].type()) {
+          case 1000: // bool
+            obj[name] = result[y][x].as<bool>();
+            break;
+          case 21: // int2
+          case 23: // int4
+            obj[name] = result[y][x].as<int>();
+            break;
+          case 700: // float4
+          case 701: // float8
+            obj[name] = result[y][x].as<double>();
+            break;
+          default:
+            obj[name] = result[y][x].as<string>();
+            break;
+        }
+      }
+
+      json.emplace_back(obj);
+    }
+
+    return json;
+  }
 }

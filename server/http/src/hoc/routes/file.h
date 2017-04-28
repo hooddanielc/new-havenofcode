@@ -2,7 +2,10 @@
 
 #include <cstdlib>
 #include <cstdint>
+#include <inttypes.h>
+#include <hoc/util.h>
 #include <hoc/route.h>
+#include <hoc/actions/file.h>
 
 namespace hoc {
 
@@ -53,22 +56,7 @@ public:
 
       ss << "limit " << w.esc(limit) << " offset " << w.esc(offset);
       auto result = w.exec(ss);
-      dj::json_t::array_t files;
-
-      for (size_t i = 0; i < result.size(); ++i) {
-        auto user = dj::json_t::empty_object;
-        user["id"] = result[i][0].as<std::string>();
-        user["createdAt"] = result[i][1].as<std::string>();
-        user["updatedAt"] = result[i][2].as<std::string>();
-        user["createdBy"] = result[i][3].as<std::string>();
-        user["awsKey"] = result[i][4].as<std::string>();
-        user["awsRegion"] = result[i][5].as<std::string>();
-        user["bytes"] = result[i][6].as<std::string>();
-        user["status"] = result[i][7].as<std::string>();
-        user["progress"] = result[i][8].as<std::string>();
-        files.emplace_back(std::move(user));
-      }
-
+      auto files = to_json(result);
       auto json = dj::json_t::empty_object;
       json["files"] = std::move(files);
       route_t<T>::send_json(req, json, 200);
@@ -114,32 +102,31 @@ public:
         name = json["file"]["name"].as<std::string>();
       }
 
+      char *endptr;
+      auto id = actions::create_upload_promise(session->db, name, strtoimax(bytes.c_str(), &endptr, 10));
       pqxx::work w(*session->db);
       std::stringstream ss;
-      ss << "insert into file (bytes, name) values ("
-         << w.esc(bytes) << ","
-         << w.quote(name) << ") returning "
-         << "id, created_by, created_at, updated_at, name, aws_key, aws_region, "
-         << "bytes, status, progress";
+      ss << "select id, created_by, created_at, updated_at, name, "
+         << "aws_key, aws_region, bytes, status, progress, upload_id "
+         << "from file where id = " << w.quote(id);
+      auto file_query = w.exec(ss);
+      auto files = to_json(file_query);
 
+      // select all the file_parts
+      ss.str("");
+      ss.clear();
+      ss << "select id, created_at, updated_at, bytes, aws_etag, "
+         << "aws_part_number, pending, created_by "
+         << "from file_part where file = " << w.quote(id);
       try {
-        auto res = w.exec(ss);
-        w.commit();
-        auto json = dj::json_t::empty_object;
-        json["files"] = dj::json_t::empty_object;
-        json["files"]["id"] = res[0][0].as<std::string>();
-        json["files"]["createdBy"] = res[0][1].as<std::string>();
-        json["files"]["createdAt"] = res[0][2].as<std::string>();
-        json["files"]["updatedAt"] = res[0][3].as<std::string>();
-        json["files"]["name"] = res[0][4].as<std::string>();
-        json["files"]["awsKey"] = res[0][5].as<std::string>();
-        json["files"]["awsRegion"] = res[0][6].as<std::string>();
-        json["files"]["bytes"] = res[0][7].as<std::string>();
-        json["files"]["status"] = res[0][8].as<std::string>();
-        json["files"]["progress"] = res[0][9].as<std::string>();
-        route_t<T>::send_json(req, json, 200);
+        auto file_part_query = w.exec(ss);
+        auto file_parts = to_json(file_part_query);
+        auto response = dj::json_t::empty_object;
+        response["files"] = files;
+        response["fileParts"] = file_parts;
+        route_t<T>::send_json(req, response, 200);
       } catch (const std::exception &e) {
-        route_t<T>::fail_with_error(req, e.what());
+        std::cout << e.what() << std::endl;
       }
     });
   }

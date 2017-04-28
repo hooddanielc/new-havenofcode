@@ -6,8 +6,7 @@ export default Ember.Component.extend({
   queue: Ember.A(),
   store: Ember.inject.service('store'),
 
-  selectedFiles: function () {
-    const files = this.$('input[type="file"]')[0].files;
+  createPromises: function (files) {
     const result = [];
 
     for (let i = 0; i < files.length; ++i) {
@@ -18,34 +17,20 @@ export default Ember.Component.extend({
       }));
     }
 
-    return result;
-  }.property('file'),
+    console.log(result);
+
+    return Ember.RSVP.Promise.all(result.map((file) => {
+      return file.save();
+    }));
+  },
 
   actions: {
     upload: function () {
       const files = this.$('input[type="file"]')[0].files;
-      window.files = files;
 
-      if (files[0].size < 5000000) {
-        throw new Error('choose a file that is at least five megabytes');
-      }
-
-      var fd = new FormData();
-      fd.append('fname', 'arch.iso');
-      fd.append('data1', files[0].slice(0, 5000000));
-      fd.append('data2', files[0].slice(0, 5000000));
-      console.log('uploading 5 megabyte file');
-      Ember.$.ajax({
-        type: 'POST',
-        url: '/api/echo',
-        data: fd,
-        processData: false,
-        contentType: false
-      }).done(function(data) {
-        console.log(data);
+      this.createPromises(files).then((res) => {
+        console.log('files', res);
       });
-
-      console.log(files);
     }
   }
 });

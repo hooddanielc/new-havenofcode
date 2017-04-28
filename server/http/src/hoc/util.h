@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <stdexcept>
+#include <pqxx/pqxx>
+#include <hoc/json.h>
 
 namespace hoc {
   std::string url_encode(const std::string &str);
@@ -28,5 +30,7 @@ namespace hoc {
 
   void open_ifstream(std::ifstream &strm, const std::string &path);
   char *random_characters(size_t size);
+  std::string camelify(std::string &str);
+  dj::json_t to_json(const pqxx::result &result);
 }
 
