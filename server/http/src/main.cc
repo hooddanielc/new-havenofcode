@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <cstdio>
+#include <fstream>
 
 #include <hoc/main.h>
 #include <hoc/env.h>
@@ -32,14 +33,16 @@ static void ngx_http_sample_put_handler(ngx_http_request_t *r) {
       cl = cl->next;
     }
   } else {
-    // the file exceeds in client_body_buffer_size.
-    // do something with file path
-    string file_path{
-      reinterpret_cast<char*>(r->request_body->temp_file->file.name.data),
-      static_cast<long unsigned int>(r->request_body->temp_file->file.name.len)
-    };
+    size_t ret;
+    size_t offset = 0;
+    size_t size = env_t::get().upload_buffer_size;
+    unsigned char buff[size];
 
-    request_wrapper->emit_file(file_path);
+    while((ret = ngx_read_file(&r->request_body->temp_file->file, buff, size, offset)) > 0) {
+      std::vector<uint8_t> data(buff, buff + ret);
+      request_wrapper->emit_data(data);
+      offset += ret;
+    }
   }
 
   // we are done reading request

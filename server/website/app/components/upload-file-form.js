@@ -17,11 +17,57 @@ export default Ember.Component.extend({
       }));
     }
 
-    console.log(result);
-
-    return Ember.RSVP.Promise.all(result.map((file) => {
-      return file.save();
+    return Ember.RSVP.Promise.all(result.map((file, i) => {
+      return file.save().then((res) => {
+        res.fileObject = files[i];
+        return res;
+      });
     }));
+  },
+
+  uploadFile: function (file, fileObject) {
+    const parts = file.get('fileParts');
+    let start = 0;
+    let end = 0;
+
+    const pop = () => {
+      const part = parts.shiftObject();
+
+      if (part) {
+        end += part.get('bytes');
+
+        const formData = new FormData();
+        console.log(fileObject);
+        formData.append('blob', fileObject.slice(start, end));
+        formData.append('blob2', fileObject.slice(start, end));
+        formData.append('regularData', 'just a test');
+        formData.append('somejson', JSON.stringify({
+          hey: 'girl',
+          how: 'it goin'
+        }));
+
+        return new Ember.RSVP.Promise((resolve, reject) => {
+          Ember.$.ajax({
+            type: 'put',
+            url: `/api/file-part/${part.get('id')}`,
+            data: formData,
+            processData: false,
+            contentType: false
+          }).done(function (data) {
+            console.log(data);
+            resolve(data);
+          }).fail(function (err) {
+            console.log(err);
+            reject(err);
+          });
+        }).then(() => {
+          start = end;
+          return pop();
+        });
+      }
+    };
+
+    return pop();
   },
 
   actions: {
@@ -29,7 +75,17 @@ export default Ember.Component.extend({
       const files = this.$('input[type="file"]')[0].files;
 
       this.createPromises(files).then((res) => {
-        console.log('files', res);
+        const pop = () => {
+          const record = res.pop();
+
+          if (record) {
+            return this.uploadFile(record, record.fileObject).then(() => {
+              return pop();
+            });
+          }
+        };
+
+        return pop();
       });
     }
   }

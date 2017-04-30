@@ -19,6 +19,7 @@ FIXTURE(rsa_crypto_t_init) {
   EXPECT_EQ(string(env_t::get().aws_key), "XXXXXXXX");
   EXPECT_EQ(string(env_t::get().aws_secret), "XXXXXXXX");
   EXPECT_EQ(env_t::get().mock_s3_uploads, true);
+  EXPECT_EQ(env_t::get().upload_buffer_size, size_t(16000));
 }
 
 int main(int argc, char *argv[]) {

@@ -12,10 +12,6 @@ void req_t::on_end(const req_t::cb_void_t &fn) {
   end_events.push_back(fn);
 }
 
-void req_t::on_file(const req_t::cb_file_t &fn) {
-  file_events.push_back(fn);
-}
-
 void req_t::emit_data(const vector<uint8_t> &data) {
   for (auto it = data_events.begin(); it != data_events.end(); ++it) {
     (*it)(data);
@@ -25,12 +21,6 @@ void req_t::emit_data(const vector<uint8_t> &data) {
 void req_t::emit_end() {
   for (auto it = end_events.begin(); it != end_events.end(); ++it) {
     (*it)();
-  }
-}
-
-void req_t::emit_file(const std::string &path) {
-  for (auto it = file_events.begin(); it != file_events.end(); ++it) {
-    (*it)(path);
   }
 }
 

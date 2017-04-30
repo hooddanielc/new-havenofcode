@@ -13,6 +13,8 @@ namespace hoc {
       const char *db_user;
       const char *db_pass;
       const char *db_host;
+      const char *upload_tmp_path;
+      const size_t upload_buffer_size;
       const char *google_api_client_id;
       const char *google_api_client_secret;
       const char *no_reply_email;
@@ -28,6 +30,8 @@ namespace hoc {
         db_user(std::getenv("HOC_DB_USER")),
         db_pass(std::getenv("HOC_DB_PASSWORD")),
         db_host(std::getenv("HOC_DB_HOST")),
+        upload_tmp_path(std::getenv("HOC_HTTP_UPLOAD_TEMP_PATH")),
+        upload_buffer_size(static_cast<size_t>(std::stoi(std::getenv("HOC_HTTP_UPLOAD_BUFFER_SIZE")))),
         google_api_client_id(std::getenv("HOC_GOOGLE_API_CLIENT_ID")),
         google_api_client_secret(std::getenv("HOC_GOOGLE_API_CLIENT_SECRET")),
         no_reply_email(std::getenv("HOC_NOREPLY_EMAIL")),

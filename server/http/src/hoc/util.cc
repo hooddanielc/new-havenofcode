@@ -109,7 +109,7 @@ namespace hoc {
           break;
         }
 
-        if (tmp[i] != '\0' && !isspace(tmp[i])) {
+        if (isalnum(tmp[i])) {
           bytes[count] = tmp[i];
           count += 1;
         }
@@ -117,7 +117,6 @@ namespace hoc {
     }
 
     bytes[count] = '\0';
-
     return bytes;
   }
 
@@ -144,11 +143,12 @@ namespace hoc {
 
         if (result[y][x].is_null()) {
           obj[name] = dj::json_t::null;
-          break;
+          continue;
         }
 
         switch (result[y][x].type()) {
-          case 1000: // bool
+          case 16:
+          case 1000:
             obj[name] = result[y][x].as<bool>();
             break;
           case 21: // int2
@@ -161,7 +161,6 @@ namespace hoc {
             break;
           default:
             obj[name] = result[y][x].as<string>();
-            break;
         }
       }
 
@@ -169,5 +168,12 @@ namespace hoc {
     }
 
     return json;
+  }
+
+  std::string random_tmp_path() {
+    std::string p(env_t::get().upload_tmp_path);
+    p += '/';
+    p.append(random_characters(50));
+    return p;
   }
 }

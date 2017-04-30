@@ -69,6 +69,8 @@ RUN cd $HOME/src && ib main.so
 
 # environment env
 ENV HOC_DOMAIN havenofcode.com
+ENV HOC_HTTP_UPLOAD_TEMP_PATH /root/tmp
+ENV HOC_HTTP_UPLOAD_BUFFER_SIZE 16000
 
 # db env
 ENV HOC_DB_NAME hoc_dev
