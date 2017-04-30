@@ -68,7 +68,6 @@ FIXTURE(calls_back) {
     "{\"hey\":\"girl\",\"how\":\"it goin\"}"
   });
 
-
   std::map<string, string> result;
   subject.on_header([&result](const map<string, string> &headers) {
     result.insert(headers.begin(), headers.end());
@@ -98,6 +97,24 @@ FIXTURE(calls_back) {
 
   test_str >> subject;
   EXPECT_EQ(ended, true);
+}
+
+FIXTURE(binary_parser_works) {
+  const char *boundary = "----WebKitFormBoundaryLRCVqhSMNAiGzh3L";
+  multipart_binary_parser_t subject(boundary);
+  bool header_called = false;
+  subject.on_header([&](const map<std::vector<uint8_t>, std::vector<uint8_t>> &) {
+    header_called = true;
+  });
+  bool body_called = false;
+  subject.on_body([&](const std::vector<uint8_t> &) {
+    body_called = true;
+  });
+
+  std::vector<uint8_t> data(test_str, test_str + strlen(test_str));
+  data >> subject;
+  EXPECT_EQ(body_called, true);
+  EXPECT_EQ(header_called, true);
 }
 
 int main(int argc, char *argv[]) {

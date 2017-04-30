@@ -37,7 +37,6 @@ export default Ember.Component.extend({
         end += part.get('bytes');
 
         const formData = new FormData();
-        console.log(fileObject);
         formData.append('blob', fileObject.slice(start, end));
         formData.append('blob2', fileObject.slice(start, end));
         formData.append('regularData', 'just a test');
@@ -64,6 +63,10 @@ export default Ember.Component.extend({
           start = end;
           return pop();
         });
+      } else {
+        console.log('saving file');
+        file.set('status', 'complete');
+        return file.save();
       }
     };
 

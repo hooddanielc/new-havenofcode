@@ -28,7 +28,7 @@ std::string complete_aws_file_part_promise(
   const string &aws_key,
   const string &upload_id,
   const int part_number,
-  const std::string &
+  const std::string &file_path
 ) {
   return "todo";
 }

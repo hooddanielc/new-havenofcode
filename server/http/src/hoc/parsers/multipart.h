@@ -65,10 +65,12 @@ private:
 
 public:
   const std::string boundary;
+  const iterable_t comparable_boundary;
   const size_t max_body_buffer_size;
   basic_multipart_parser_t(const char *_boundary, size_t _max_body_buffer_size = 16000) :
     state(BEGIN),
     boundary(std::string("--") + _boundary),
+    comparable_boundary(boundary.begin(), boundary.end()),
     max_body_buffer_size(_max_body_buffer_size) {}
 
   void on_header(const cb_header_t &fn) {
@@ -84,6 +86,10 @@ public:
   }
 
   void push_char(char c) {
+    if (c == '\r') {
+      return;
+    }
+
     switch (state) {
       case BEGIN:
         state = BOUNDARY;
@@ -95,8 +101,8 @@ public:
         }
 
         if (
-          boundary_buffer.size() == boundary.size() &&
-          boundary_buffer == boundary
+          boundary_buffer.size() == comparable_boundary.size() &&
+          boundary_buffer == comparable_boundary
         ) {
           state = BOUNDARY_END;
         }
@@ -143,7 +149,6 @@ public:
           emit_header(header_buffer);
           header_buffer.clear();
         } else {
-          header_key_buffer.clear();
           header_key_buffer.push_back(c);
           state = HEADER_KEY;
         }
@@ -158,7 +163,7 @@ public:
         }
 
         if (
-          (boundary_buffer.size() == 0 || boundary_buffer.size() > boundary.size()) &&
+          (boundary_buffer.size() == 0 || boundary_buffer.size() > comparable_boundary.size()) &&
           body_buffer.size() >= max_body_buffer_size
         ) {
           emit_body(body_buffer);
@@ -168,10 +173,15 @@ public:
         body_buffer.push_back(c);
 
         if (
-          boundary_buffer.size() == boundary.size() &&
-          boundary_buffer == boundary
+          boundary_buffer.size() == comparable_boundary.size() &&
+          boundary_buffer == comparable_boundary
         ) {
-          body_buffer.erase(body_buffer.end() - boundary.size() - 1, body_buffer.end());
+          if (body_buffer.size() > comparable_boundary.size() + 1) {
+            body_buffer.erase(body_buffer.end() - comparable_boundary.size() - 1, body_buffer.end());
+          } else {
+            body_buffer.clear();
+          }
+
           emit_body(body_buffer);
           body_buffer.clear();
           state = BOUNDARY_END;
@@ -225,7 +235,7 @@ const std::string &operator>>(const std::string &is, basic_multipart_parser_t<it
 }
 
 template <typename iterable_t>
-iterable_t &operator>>(const iterable_t &is, basic_multipart_parser_t<iterable_t> &that) {
+const iterable_t &operator>>(const iterable_t &is, basic_multipart_parser_t<iterable_t> &that) {
   for (auto it = is.begin(); it != is.end(); ++it) {
     that.push_char(*it);
   }
