@@ -1,7 +1,6 @@
 TMP=$(pwd)
 cd /root/src
 stop-http
-set -e
 start-http
 
 for file in /root/src/**/*-test.cc

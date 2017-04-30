@@ -28,7 +28,7 @@ std::string complete_aws_file_part_promise(
   const string &aws_key,
   const string &upload_id,
   const int part_number,
-  const vector<uint8_t> &
+  const std::string &
 ) {
   return "todo";
 }
@@ -149,14 +149,14 @@ void start_file_part_promise(
 void complete_file_part_promise(
   std::shared_ptr<pqxx::connection> db,
   const string &file_part_id,
-  const vector<uint8_t> &data,
+  const std::string &file_path,
   const function<string(
     const string &,
     const string &,
     const string &,
     const string &,
     const int,
-    const vector<uint8_t> &
+    const std::string &
   )> &fn
 ) {
   pqxx::work w(*db);
@@ -182,7 +182,7 @@ void complete_file_part_promise(
   string etag;
 
   try {
-    etag = fn(aws_region, aws_bucket, aws_key, aws_upload_id, part_number, data);
+    etag = fn(aws_region, aws_bucket, aws_key, aws_upload_id, part_number, file_path);
   } catch (const exception &e) {
     ss.str("");
     ss.clear();

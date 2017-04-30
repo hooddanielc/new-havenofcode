@@ -33,7 +33,7 @@ std::string complete_aws_file_part_promise(
   const std::string &aws_key,
   const std::string &upload_id,
   const int part_number,
-  const std::vector<uint8_t> &data
+  const std::string &file_path
 );
 
 void complete_aws_multipart_upload(
@@ -72,14 +72,14 @@ void start_file_part_promise(
 void complete_file_part_promise(
   std::shared_ptr<pqxx::connection> db,
   const std::string &file_part_id,
-  const std::vector<uint8_t> &data,
+  const std::string &file_path,
   const std::function<std::string(
     const std::string &,
     const std::string &,
     const std::string &,
     const std::string &,
     const int,
-    const std::vector<uint8_t> &
+    const std::string &
   )> &fn = complete_aws_file_part_promise
 );
 

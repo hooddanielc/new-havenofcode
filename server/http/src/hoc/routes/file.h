@@ -146,15 +146,13 @@ public:
     }
 
     auto path = std::shared_ptr<std::string>(new std::string(random_tmp_path()));
-    int fd = creat(path->c_str(), 0644);
+    auto out = std::shared_ptr<std::ofstream>(new std::ofstream(*path));
 
-    req.on_data([fd](const std::vector<uint8_t> &data) {
-      write(fd, &data[0], data.size());
+    req.on_data([out](const std::vector<uint8_t> &data) {
+      *out << &data[0];
     });
 
-    req.on_end([&, fd, path]() {
-      close(fd);
-
+    req.on_end([&, path]() {
       // delete the file
       unlink(path->c_str());
       route_t<T>::fail_with_error(req, "not implemented", 500);

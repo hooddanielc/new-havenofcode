@@ -255,26 +255,25 @@ FIXTURE(complete_file_part_promise_for_small_file) {
     auto file_id = actions::create_upload_promise(c, "name", 1000000, [](const string &, const string &, const string &) {
       return "asdf";
     });
-    char data[1000000];
-    vector<uint8_t> megabyte(data, data + sizeof(data));
+    string file_name = "file_name.exe";
 
     pqxx::work w1(*c);
     auto file_part = w1.exec("select id from file_part where file = " + w1.quote(file_id));
     auto generated_key = w1.exec("select aws_key from file where id = " + w1.quote(file_id))[0][0].as<string>();
     w1.commit();
     auto file_part_id = file_part[0][0].as<string>();
-    EXPECT_FAIL([&megabyte, c, &file_part_id]() {
+    EXPECT_FAIL([&file_name, c, &file_part_id]() {
       actions::complete_file_part_promise(
         c,
         file_part_id,
-        megabyte,
+        file_name,
         [](
           const string &,
           const string &,
           const string &,
           const string &,
           const int,
-          const vector<uint8_t> &
+          const string &
         ) {
           return ""; // non multipart upload returns empty string
         }
@@ -284,21 +283,21 @@ FIXTURE(complete_file_part_promise_for_small_file) {
     actions::complete_file_part_promise(
       c,
       file_part_id,
-      megabyte,
-      [&generated_key](
+      file_name,
+      [&generated_key, &file_name](
         const string &region,
         const string &bucket,
         const string &key,
         const string &upload_id,
         const int part_number,
-        const vector<uint8_t> &data
+        const string &f_name
       ) {
         EXPECT_EQ(region, "us-west-2");
         EXPECT_EQ(bucket, "havenofcode");
         EXPECT_EQ(key, generated_key);
         EXPECT_EQ(upload_id, ""); // small files do not have an upload_id
         EXPECT_EQ(part_number, 1);
-        EXPECT_EQ(data.size(), size_t(1000000));
+        EXPECT_EQ(f_name, file_name);
         return "";
       }
     );
@@ -320,8 +319,7 @@ FIXTURE(complete_file_part_promise_for_large_file) {
     auto file_id = actions::create_upload_promise(c, "name", 5000001, [](const string &, const string &, const string &) {
       return "asdf";
     });
-    char data[5000001];
-    vector<uint8_t> megabyte(data, data + sizeof(data));
+    string file_name = "file_name.exe";
 
     pqxx::work w1(*c);
     auto file_parts = w1.exec("select id, aws_part_number from file_part where file = " + w1.quote(file_id) + " order by aws_part_number asc");
@@ -330,18 +328,18 @@ FIXTURE(complete_file_part_promise_for_large_file) {
     for (size_t i = 0; i < file_parts.size(); ++i) {
       auto file_part_id = file_parts[i][0].as<string>();
       auto file_part_number = file_parts[i][1].as<int>();
-      EXPECT_FAIL([&megabyte, c, &file_part_id]() {
+      EXPECT_FAIL([&file_name, c, &file_part_id]() {
         actions::complete_file_part_promise(
           c,
           file_part_id,
-          megabyte,
+          file_name,
           [](
             const string &,
             const string &,
             const string &,
             const string &,
             const int,
-            const vector<uint8_t> &
+            const string &
           ) {
             return "";
           }
@@ -351,21 +349,21 @@ FIXTURE(complete_file_part_promise_for_large_file) {
       actions::complete_file_part_promise(
         c,
         file_part_id,
-        megabyte,
-        [&generated_key, &file_part_number](
+        file_name,
+        [&file_name, &generated_key, &file_part_number](
           const string &region,
           const string &bucket,
           const string &key,
           const string &upload_id,
           const int part_number,
-          const vector<uint8_t> &data
+          const string &f_name
         ) {
           EXPECT_EQ(region, "us-west-2");
           EXPECT_EQ(bucket, "havenofcode");
           EXPECT_EQ(key, generated_key);
           EXPECT_EQ(upload_id, "asdf"); // small files do not have an upload_id
           EXPECT_EQ(part_number, file_part_number);
-          EXPECT_EQ(data.size(), size_t(5000001));
+          EXPECT_EQ(file_name, f_name);
           return "aws_etag";
         }
       );
@@ -390,8 +388,7 @@ FIXTURE(failed_file_part_promise_rolls_back) {
     auto file_id = actions::create_upload_promise(c, "name", 5000001, [](const string &, const string &, const string &) {
       return "asdf";
     });
-    char data[5000001];
-    vector<uint8_t> megabyte(data, data + sizeof(data));
+    string file_name = "file_name.exe";
 
     pqxx::work w1(*c);
     auto file_parts = w1.exec("select id, aws_part_number from file_part where file = " + w1.quote(file_id) + " order by aws_part_number asc");
@@ -400,18 +397,18 @@ FIXTURE(failed_file_part_promise_rolls_back) {
     for (size_t i = 0; i < file_parts.size(); ++i) {
       auto file_part_id = file_parts[i][0].as<string>();
       auto file_part_number = file_parts[i][1].as<int>();
-      EXPECT_FAIL([&megabyte, c, &file_part_id]() {
+      EXPECT_FAIL([&file_name, c, &file_part_id]() {
         actions::complete_file_part_promise(
           c,
           file_part_id,
-          megabyte,
+          file_name,
           [](
             const string &,
             const string &,
             const string &,
             const string &,
             const int,
-            const vector<uint8_t> &
+            const string &
           ) {
             return "";
           }
@@ -424,14 +421,14 @@ FIXTURE(failed_file_part_promise_rolls_back) {
         actions::complete_file_part_promise(
           c,
           file_part_id,
-          megabyte,
+          file_name,
           [&generated_key, &file_part_number](
             const string &,
             const string &,
             const string &,
             const string &,
             const int,
-            const vector<uint8_t> &
+            const string &
           ) {
             throw runtime_error("this should autoremove promise row");
             return "aws_etag";
@@ -449,14 +446,14 @@ FIXTURE(failed_file_part_promise_rolls_back) {
         actions::complete_file_part_promise(
           c,
           file_part_id,
-          megabyte,
+          file_name,
           [&generated_key, &file_part_number](
             const string &,
             const string &,
             const string &,
             const string &,
             const int,
-            const vector<uint8_t> &
+            const string &
           ) {
             return "aws_etag";
           }
@@ -467,21 +464,21 @@ FIXTURE(failed_file_part_promise_rolls_back) {
       actions::complete_file_part_promise(
         c,
         file_part_id,
-        megabyte,
-        [&generated_key, &file_part_number](
+        file_name,
+        [&generated_key, &file_part_number, &file_name](
           const string &region,
           const string &bucket,
           const string &key,
           const string &upload_id,
           const int part_number,
-          const vector<uint8_t> &data
+          const string &f_name
         ) {
           EXPECT_EQ(region, "us-west-2");
           EXPECT_EQ(bucket, "havenofcode");
           EXPECT_EQ(key, generated_key);
           EXPECT_EQ(upload_id, "asdf"); // small files do not have an upload_id
           EXPECT_EQ(part_number, file_part_number);
-          EXPECT_EQ(data.size(), size_t(5000001));
+          EXPECT_EQ(f_name, file_name);
           return "aws_etag";
         }
       );
@@ -506,8 +503,7 @@ FIXTURE(complete_entire_file_promise_for_small_file) {
     auto file_id = actions::create_upload_promise(c, "name", 1000000, [](const string &, const string &, const string &) {
       return "asdf";
     });
-    char data[1000000];
-    vector<uint8_t> megabyte(data, data + sizeof(data));
+    std::string file_name = "file_name.exe";
     pqxx::work w1(*c);
     auto file = w1.exec("select status, aws_key from file where id = " + w1.quote(file_id));
     EXPECT_EQ(file[0][0].as<string>(), "pending");
@@ -519,14 +515,14 @@ FIXTURE(complete_entire_file_promise_for_small_file) {
     actions::complete_file_part_promise(
       c,
       file_part_id,
-      megabyte,
+      file_name,
       [](
         const string &,
         const string &,
         const string &,
         const string &,
         const int,
-        const vector<uint8_t> &
+        const string &
       ) {
         return "";
       }
@@ -572,20 +568,19 @@ FIXTURE(complete_entire_file_promise_for_large_file) {
     w1.commit();
     for (size_t i = 0; i < file_parts.size(); ++i) {
       auto file_part_id = file_parts[i][0].as<string>();
-      char data[(i + 1 == file_parts.size()) ? 1 : 5000000];
-      vector<uint8_t> megabyte(data, data + sizeof(data));
+      string file_name = "file_name.exe";
       actions::start_file_part_promise(c, file_part_id);
       actions::complete_file_part_promise(
         c,
         file_part_id,
-        megabyte,
+        file_name,
         [](
           const string &,
           const string &,
           const string &,
           const string &,
           const int,
-          const vector<uint8_t> &
+          const string &
         ) {
           return "imanawsetag";
         }
