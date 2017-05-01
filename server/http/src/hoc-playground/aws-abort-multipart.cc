@@ -40,7 +40,7 @@ int main(int argc, char *args[]) {
   if (request_outcome.IsSuccess()) {
     cout << "abort success: " << args[1] << endl;
   } else {
-    cout << "failure" << endl;
+    cout << "failure: " << request_outcome.GetError().GetMessage() << endl;
   }
 
   Aws::ShutdownAPI(options);

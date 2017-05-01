@@ -10,20 +10,28 @@ string create_aws_multipart_upload(
   const string &aws_bucket,
   const string &aws_key
 ) {
-  if (!env_t::get().mock_s3_uploads) {
+  if (env_t::get().mock_s3_uploads) {
     return "not-uploaded-to-s3";
   }
 
-  return "todo";
-}
+  Aws::Client::ClientConfiguration config;
+  config.region = aws_region.c_str();
 
-void mock_cancel_aws_multipart_upload(
-  const string &aws_region,
-  const string &aws_bucket,
-  const string &aws_key,
-  const string &upload_id
-) {
-  std::cout << "mock_cancel_aws_multipart_upload" << std::endl;
+  Aws::S3::S3Client client(Aws::Auth::AWSCredentials(
+    env_t::get().aws_key,
+    env_t::get().aws_secret
+  ), config);
+
+  Aws::S3::Model::CreateMultipartUploadRequest request;
+  request.SetBucket(aws_bucket.c_str());
+  request.SetKey(aws_key.c_str());
+  auto request_outcome = client.CreateMultipartUpload(request);
+
+  if (!request_outcome.IsSuccess()) {
+    throw std::runtime_error(request_outcome.GetError().GetMessage().c_str());
+  }
+
+  return request_outcome.GetResult().GetUploadId().c_str();
 }
 
 void cancel_aws_multipart_upload(
@@ -33,17 +41,30 @@ void cancel_aws_multipart_upload(
   const string &upload_id
 ) {
   if (env_t::get().mock_s3_uploads) {
-    return mock_cancel_aws_multipart_upload(aws_region, aws_bucket, aws_key, upload_id);
+    return;
   }
 
-  // todo
+  Aws::Client::ClientConfiguration config;
+  config.region = aws_region.c_str();
+
+  Aws::S3::S3Client client(Aws::Auth::AWSCredentials(
+    env_t::get().aws_key,
+    env_t::get().aws_secret
+  ), config);
+
+  Aws::S3::Model::AbortMultipartUploadRequest request;
+  request.SetBucket(aws_bucket.c_str());
+  request.SetKey(aws_key.c_str());
+  request.SetUploadId(upload_id.c_str());
+  auto request_outcome = client.AbortMultipartUpload(request);
+
+  if (!request_outcome.IsSuccess()) {
+    throw runtime_error(request_outcome.GetError().GetMessage().c_str());
+  }
 }
 
 std::string mock_complete_aws_file_part_promise(
-  const string &aws_region,
-  const string &aws_bucket,
   const string &aws_key,
-  const string &upload_id,
   const int part_number,
   const std::string &file_path
 ) {
@@ -59,7 +80,7 @@ std::string mock_complete_aws_file_part_promise(
   return dst_path;
 }
 
-std::string complete_aws_file_part_promise(
+string complete_aws_file_part_promise(
   const string &aws_region,
   const string &aws_bucket,
   const string &aws_key,
@@ -69,23 +90,63 @@ std::string complete_aws_file_part_promise(
 ) {
   if (env_t::get().mock_s3_uploads) {
     return mock_complete_aws_file_part_promise(
-      aws_region,
-      aws_bucket,
       aws_key,
-      upload_id,
       part_number,
       file_path
     );
   }
 
-  return "todo";
+  Aws::Client::ClientConfiguration config;
+  config.region = aws_region.c_str();
+  Aws::S3::S3Client client(Aws::Auth::AWSCredentials(
+    env_t::get().aws_key,
+    env_t::get().aws_secret
+  ), config);
+
+  // empty upload id means the file
+  // is less than 5MB. Files less than 5 MB do
+  // are not allowed to be uploaded in multiple parts
+  if (upload_id == "") {
+    Aws::S3::Model::PutObjectRequest object_request;
+    object_request.SetBucket(aws_bucket.c_str());
+    object_request.SetKey(aws_key.c_str());
+    auto input_data = Aws::MakeShared<Aws::FStream>(
+      "PutObjectInputStream",
+      file_path.c_str(), std::ios_base::in
+    );
+    object_request.SetBody(input_data);
+    auto put_object_outcome = client.PutObject(object_request);
+
+    if (!put_object_outcome.IsSuccess()) {
+      throw runtime_error(put_object_outcome.GetError().GetMessage().c_str());
+    }
+
+    return "";
+  }
+
+  auto part_stream = Aws::MakeShared<Aws::FStream>(
+    "PutObjectInputStream",
+    file_path.c_str(), std::ios_base::in
+  );
+  Aws::Utils::ByteBuffer part_md5(Aws::Utils::HashingUtils::CalculateMD5(*part_stream));
+  Aws::S3::Model::UploadPartRequest upload_request;
+  upload_request.SetBucket(aws_bucket.c_str());
+  upload_request.SetKey(aws_key.c_str());
+  upload_request.SetPartNumber(part_number);
+  upload_request.SetUploadId(upload_id.c_str());
+  upload_request.SetBody(part_stream);
+  upload_request.SetContentMD5(Aws::Utils::HashingUtils::Base64Encode(part_md5));
+  auto upload_part_outcome = client.UploadPart(upload_request);
+
+  if (!upload_part_outcome.IsSuccess()) {
+    throw runtime_error(upload_part_outcome.GetError().GetMessage().c_str());
+  }
+
+  return upload_part_outcome.GetResult().GetETag().c_str();
 }
 
 void mock_complete_aws_multipart_upload(
-  const string &aws_region,
-  const string &aws_bucket,
   const string &aws_key,
-  const string &upload_id,
   const vector<string> &keys
 ) {
   std::string tmp_path(env_t::get().upload_tmp_path);
@@ -107,14 +168,40 @@ void complete_aws_multipart_upload(
 ) {
   if (env_t::get().mock_s3_uploads) {
     return mock_complete_aws_multipart_upload(
-      aws_region,
-      aws_bucket,
       aws_key,
-      upload_id,
       keys
     );
   }
-  // todo
+
+  Aws::Client::ClientConfiguration config;
+  config.region = aws_region.c_str();
+
+  Aws::S3::S3Client client(Aws::Auth::AWSCredentials(
+    env_t::get().aws_key,
+    env_t::get().aws_secret
+  ), config);
+
+  Aws::S3::Model::CompletedMultipartUpload complete_upload;
+
+  int i = 0;
+  for (auto it = keys.begin(); it != keys.end(); ++it) {
+    const char *etag = (*it).c_str();
+    Aws::S3::Model::CompletedPart completed_part;
+    completed_part.SetETag(etag);
+    completed_part.SetPartNumber(++i);
+    complete_upload.AddParts(completed_part);
+  }
+
+  Aws::S3::Model::CompleteMultipartUploadRequest complete_upload_request;
+  complete_upload_request.SetBucket(aws_bucket.c_str());
+  complete_upload_request.SetKey(aws_key.c_str());
+  complete_upload_request.SetUploadId(upload_id.c_str());
+  complete_upload_request.WithMultipartUpload(complete_upload);
+  auto request_outcome = client.CompleteMultipartUpload(complete_upload_request);
+
+  if (!request_outcome.IsSuccess()) {
+    throw runtime_error(request_outcome.GetError().GetMessage().c_str());
+  }
 }
 
 std::string create_upload_promise(
@@ -134,7 +221,7 @@ std::string create_upload_promise(
   // will need to be uploaded. each
   // part must be at least 5mb
   // and last part can be any size
-  long double part_size = 5000000;
+  long double part_size = 5242880;
   int num_parts = ceil(bytes / part_size);
   string upload_id("");
   if (num_parts > 1) {
@@ -155,7 +242,7 @@ std::string create_upload_promise(
   ss.clear();
   for (int i = 0; i < num_parts; ++i) {
     ss << "insert into file_part (bytes, file, aws_part_number) values ("
-       << w.esc(i + 1 == num_parts ? to_string(bytes - i * part_size) : "5000000")
+       << w.esc(i + 1 == num_parts ? to_string(bytes - i * part_size) : "5242880")
        << ", " << w.quote(id) << ", " << i + 1 << "); ";
     w.exec(ss);
     ss.str("");
