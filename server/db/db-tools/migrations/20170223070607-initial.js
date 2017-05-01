@@ -154,6 +154,7 @@ module.exports = {
         created_at  timestamp with time zone default 'now()' not null,
         updated_at  timestamp with time zone default 'now()' not null,
         deleted     boolean default 'FALSE' not null,
+        type        text default 'text/plain' not null,
         name        text,
         upload_id   text,
         aws_key     text default '/' || current_account_id() || '/' || uuid_generate_v4(),
@@ -175,7 +176,9 @@ module.exports = {
         updated_at,
         deleted,
         status,
-        progress
+        progress,
+        name,
+        type
       ) on file to members;
       grant select on file to public;
       alter table file enable row level security;

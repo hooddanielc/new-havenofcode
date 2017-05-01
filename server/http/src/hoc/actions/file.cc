@@ -10,7 +10,20 @@ string create_aws_multipart_upload(
   const string &aws_bucket,
   const string &aws_key
 ) {
+  if (!env_t::get().mock_s3_uploads) {
+    return "not-uploaded-to-s3";
+  }
+
   return "todo";
+}
+
+void mock_cancel_aws_multipart_upload(
+  const string &aws_region,
+  const string &aws_bucket,
+  const string &aws_key,
+  const string &upload_id
+) {
+  std::cout << "mock_cancel_aws_multipart_upload" << std::endl;
 }
 
 void cancel_aws_multipart_upload(
@@ -19,7 +32,31 @@ void cancel_aws_multipart_upload(
   const string &aws_key,
   const string &upload_id
 ) {
+  if (env_t::get().mock_s3_uploads) {
+    return mock_cancel_aws_multipart_upload(aws_region, aws_bucket, aws_key, upload_id);
+  }
+
   // todo
+}
+
+std::string mock_complete_aws_file_part_promise(
+  const string &aws_region,
+  const string &aws_bucket,
+  const string &aws_key,
+  const string &upload_id,
+  const int part_number,
+  const std::string &file_path
+) {
+  std::string user_dir(aws_key.begin() + 1, aws_key.begin() + 37);
+  std::string tmp_path(env_t::get().upload_tmp_path);
+  std::string new_dir(tmp_path + "/fake-s3/" + user_dir);
+  mkdir((tmp_path + "/fake-s3").c_str(), 0644);
+  mkdir(new_dir.c_str(), 0644);
+  std::ifstream src(file_path, std::ios::binary);
+  std::string dst_path = tmp_path + "/fake-s3" + aws_key + "-" + to_string(part_number);
+  std::ofstream dst(dst_path, std::ios::binary);
+  dst << src.rdbuf();
+  return dst_path;
 }
 
 std::string complete_aws_file_part_promise(
@@ -30,7 +67,35 @@ std::string complete_aws_file_part_promise(
   const int part_number,
   const std::string &file_path
 ) {
+  if (env_t::get().mock_s3_uploads) {
+    return mock_complete_aws_file_part_promise(
+      aws_region,
+      aws_bucket,
+      aws_key,
+      upload_id,
+      part_number,
+      file_path
+    );
+  }
+
   return "todo";
+}
+
+void mock_complete_aws_multipart_upload(
+  const string &aws_region,
+  const string &aws_bucket,
+  const string &aws_key,
+  const string &upload_id,
+  const vector<string> &keys
+) {
+  std::string tmp_path(env_t::get().upload_tmp_path);
+  std::string dst_path = tmp_path + "/fake-s3" + aws_key;
+  std::ofstream dst(dst_path, std::ios::binary);
+  for (auto it = keys.begin(); it != keys.end(); ++it) {
+    std::ifstream src(*it, std::ios::binary);
+    dst << src.rdbuf();
+    unlink((*it).c_str());
+  }
 }
 
 void complete_aws_multipart_upload(
@@ -40,6 +105,15 @@ void complete_aws_multipart_upload(
   const string &upload_id,
   const vector<string> &keys
 ) {
+  if (env_t::get().mock_s3_uploads) {
+    return mock_complete_aws_multipart_upload(
+      aws_region,
+      aws_bucket,
+      aws_key,
+      upload_id,
+      keys
+    );
+  }
   // todo
 }
 
@@ -196,7 +270,7 @@ void complete_file_part_promise(
   ss.clear();
   ss << "update file_part set "
      << "aws_etag = " << ((etag == "") ? "NULL" : w.quote(etag)) << ", "
-     << "pending = 'FALSE'";
+     << "pending = 'FALSE' where id = " << w.quote(file_part_id);
   w.exec(ss);
   w.commit();
 }

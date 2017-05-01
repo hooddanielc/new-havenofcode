@@ -16,6 +16,7 @@ namespace hoc {
     routes.push_back(unique_ptr<route_t<req_t>>(new user_route_single_t<req_t>()));
     routes.push_back(unique_ptr<route_t<req_t>>(new user_route_query_t<req_t>()));
     routes.push_back(unique_ptr<route_t<req_t>>(new file_route_query_t<req_t>()));
+    routes.push_back(unique_ptr<route_t<req_t>>(new file_single_route_t<req_t>()));
     routes.push_back(unique_ptr<route_t<req_t>>(new file_part_route_t<req_t>()));
   }
 

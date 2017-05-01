@@ -86,10 +86,6 @@ public:
   }
 
   void push_char(char c) {
-    if (c == '\r') {
-      return;
-    }
-
     switch (state) {
       case BEGIN:
         state = BOUNDARY;
@@ -109,6 +105,10 @@ public:
 
         break;
       case BOUNDARY_END:
+        if (c == '\r') {
+          break;
+        }
+
         if (c == '\n') {
           boundary_buffer.clear();
           state = HEADER_KEY;
@@ -127,12 +127,16 @@ public:
       case HEADER_KEY:
         if (c == ':') {
           state = HEADER_VALUE;
-        } else if (c != '\n') {
+        } else if (c != '\n' && c != '\n') {
           header_key_buffer.push_back(c);
         }
 
         break;
       case HEADER_VALUE:
+        if (c == '\r') {
+          break;
+        }
+
         if (c == '\n') {
           state = HEADER_END;
           header_buffer[header_key_buffer] = header_val_buffer;
@@ -144,6 +148,10 @@ public:
 
         break;
       case HEADER_END:
+        if (c == '\r') {
+          break;
+        }
+
         if (c == '\n') {
           state = BODY;
           emit_header(header_buffer);
@@ -162,6 +170,8 @@ public:
           boundary_buffer.push_back(c);
         }
 
+        body_buffer.push_back(c);
+
         if (
           (boundary_buffer.size() == 0 || boundary_buffer.size() > comparable_boundary.size()) &&
           body_buffer.size() >= max_body_buffer_size
@@ -170,14 +180,16 @@ public:
           body_buffer.clear();
         }
 
-        body_buffer.push_back(c);
-
         if (
           boundary_buffer.size() == comparable_boundary.size() &&
           boundary_buffer == comparable_boundary
         ) {
-          if (body_buffer.size() > comparable_boundary.size() + 1) {
-            body_buffer.erase(body_buffer.end() - comparable_boundary.size() - 1, body_buffer.end());
+          if (body_buffer.size() >= comparable_boundary.size() + 1) {
+            body_buffer.erase(body_buffer.end() - (comparable_boundary.size() + 1), body_buffer.end());
+
+            if (body_buffer.size() > 0 && body_buffer.back() == '\r') {
+              body_buffer.erase(body_buffer.end() - 1, body_buffer.end());
+            }
           } else {
             body_buffer.clear();
           }
@@ -188,6 +200,10 @@ public:
         }
         break;
       case END:
+        if (c == '\r') {
+          break;
+        }
+
         if (c != '\n') {
           throw std::runtime_error("multipart ended");
         }

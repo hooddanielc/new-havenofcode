@@ -6,8 +6,11 @@
 #include <functional>
 #include <cmath>
 #include <iostream>
+#include <fstream>
 #include <stdexcept>
 #include <vector>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <pqxx/pqxx>
 #include <hoc/env.h>
 

@@ -145,9 +145,94 @@ public:
 };
 
 template<typename T>
+class file_single_route_t : public route_t<T> {
+public:
+  file_single_route_t() : route_t<T>("/api/files/:id") {}
+
+  void put(T &req, const url_match_result_t &match, std::shared_ptr<session_t<req_t>> &session) {
+    if (!session->authenticated()) {
+      return route_t<T>::fail_with_error(req, "login required", 403);
+    }
+
+    auto file_id = std::make_shared<std::string>(match.params[0]);
+
+    pqxx::work w(*session->db);
+    std::stringstream ss;
+    ss << "select status, name, type from file where id = " << w.quote(*file_id);
+    auto files = std::make_shared<pqxx::result>(w.exec(ss));
+    w.commit();
+    ss.str("");
+    ss.clear();
+
+    if (!files->size()) {
+      return route_t<T>::fail_with_error(req, "file not found", 404);
+    }
+
+    auto str = std::shared_ptr<std::string>(new std::string());
+    req.on_data([str](const std::vector<uint8_t> &data) {
+      str->append(data.begin(), data.end());
+    });
+
+    req.on_end([&, str, files, session, file_id]() {
+      dj::json_t json;
+
+      try {
+        json = dj::json_t::from_string((*str).c_str());
+      } catch (const std::exception &e) {
+        return route_t<T>::fail_with_error(req, "invalid json");
+      }
+
+      if (!json.contains("file")) {
+        return route_t<T>::fail_with_error(req, "invalid json");
+      }
+
+      if (
+        !json["file"].contains("name") ||
+        !json["file"].contains("type") ||
+        !json["file"].contains("status")
+      ) {
+        return route_t<T>::fail_with_error(req, "invalid file model");
+      }
+
+      auto status = (*files)[0][0].as<std::string>();
+      auto name = (*files)[0][1].as<std::string>();
+      auto type = (*files)[0][2].as<std::string>();
+      auto u_status = json["file"]["status"].as<std::string>();
+      auto u_name = json["file"]["name"].as<std::string>();
+      auto u_type = json["file"]["type"].as<std::string>();
+
+      if (u_status != status) {
+        if (status == "complete" || status == "canceled") {
+          return route_t<T>::fail_with_error(req, "can't change status from " + status);
+        }
+
+        if (u_status == "complete") {
+          actions::complete_upload_promise(session->db, *file_id);
+        } else if (u_status == "canceled") {
+          actions::cancel_upload_promise(session->db, *file_id);
+        } else {
+          return route_t<T>::fail_with_error(req, "invalid status");
+        }
+      }
+
+      pqxx::work w_update(*session->db);
+      std::stringstream ss;
+      ss << "update file set name = " << w_update.quote(u_name) << ", "
+         << "type = " << w_update.quote(u_type) << " where id = " << w_update.quote(*file_id) << " "
+         << "returning id, created_by, created_at, updated_at, name, "
+         << "aws_key, aws_region, bytes, status, progress, upload_id";
+      auto query = w_update.exec(ss);
+      auto response = dj::json_t::empty_object;
+      response["file"] = to_json(query)[0];
+      route_t<T>::send_json(req, response, 200);
+    });
+  }
+};
+
+template<typename T>
 class file_part_route_t : public route_t<T> {
 public:
-  file_part_route_t() : route_t<T>("/api/file-part/:id") {}
+  file_part_route_t() : route_t<T>("/api/file-parts/:id") {}
 
   void put(T &req, const url_match_result_t &match, std::shared_ptr<session_t<req_t>> &session) {
     if (!session->authenticated()) {
@@ -195,7 +280,7 @@ public:
     });
 
     auto path = std::shared_ptr<std::string>(new std::string(random_tmp_path()));
-    auto out = std::shared_ptr<std::ofstream>(new std::ofstream(*path));
+    auto out = std::shared_ptr<std::ofstream>(new std::ofstream(*path, std::ios::binary | std::ios::app));
 
     parser->on_body([should_capture, out](const std::vector<uint8_t> &body) {
       if ((*should_capture)) {

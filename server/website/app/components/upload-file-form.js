@@ -37,18 +37,13 @@ export default Ember.Component.extend({
         end += part.get('bytes');
 
         const formData = new FormData();
-        formData.append('blob', fileObject.slice(start, end));
-        formData.append('blob2', fileObject.slice(start, end));
-        formData.append('regularData', 'just a test');
-        formData.append('somejson', JSON.stringify({
-          hey: 'girl',
-          how: 'it goin'
-        }));
+        const blob = fileObject.slice(start, end);
+        formData.append('blob', blob);
 
         return new Ember.RSVP.Promise((resolve, reject) => {
           Ember.$.ajax({
             type: 'put',
-            url: `/api/file-part/${part.get('id')}`,
+            url: `/api/file-parts/${part.get('id')}`,
             data: formData,
             processData: false,
             contentType: false
