@@ -72,6 +72,9 @@ ENV HOC_DOMAIN havenofcode.com
 ENV HOC_HTTP_UPLOAD_TEMP_PATH /root/tmp
 ENV HOC_HTTP_UPLOAD_BUFFER_SIZE 16000
 
+# add directory for debuggin uploads
+RUN mkdir /root/tmp
+
 # db env
 ENV HOC_DB_NAME hoc_dev
 ENV HOC_DB_USER admin_dev

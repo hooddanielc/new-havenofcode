@@ -16,6 +16,7 @@ docker run -ti \
   -v $DIR/http/logs:/root/logs \
   -v $DIR/http/scripts:/root/scripts \
   -v $DIR/website:/root/website \
+  -v $DIR/http/tmp:/root/tmp \
   -p 80:80 \
   dhoodlum/havenofcode-http \
   zsh
