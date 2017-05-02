@@ -19,40 +19,38 @@ using namespace hoc;
 ngx_module_t current_module;
 
 static void ngx_http_sample_put_handler(ngx_http_request_t *r) {
-  req_t *request_wrapper = reinterpret_cast<req_t*>(ngx_http_get_module_ctx(r, current_module));
+  std::thread t([r]() {
+    req_t *request_wrapper = reinterpret_cast<req_t*>(ngx_http_get_module_ctx(r, current_module));
+    app_t::get().emit_request(*request_wrapper);
 
-  if (r->request_body->temp_file == NULL) {
-    // request body is less than client_body_buffer_size
-    // defined in config
-    ngx_chain_t *cl = r->request_body->bufs;
+    if (r->request_body->temp_file == NULL) {
+      // request body is less than client_body_buffer_size
+      // defined in config
+      ngx_chain_t *cl = r->request_body->bufs;
 
-    while (cl != NULL) {
-      ngx_buf_t *buf = cl->buf;
-      vector<uint8_t> data(buf->start, buf->last);
-      request_wrapper->emit_data(data);
-      cl = cl->next;
+      while (cl != NULL) {
+        ngx_buf_t *buf = cl->buf;
+        vector<uint8_t> data(buf->start, buf->last);
+        request_wrapper->emit_data(data);
+        cl = cl->next;
+      }
+    } else {
+      size_t ret;
+      size_t offset = 0;
+      size_t size = env_t::get().upload_buffer_size;
+      unsigned char buff[size];
+
+      while((ret = ngx_read_file(&r->request_body->temp_file->file, buff, size, offset)) > 0) {
+        std::vector<uint8_t> data(buff, buff + ret);
+        request_wrapper->emit_data(data);
+        offset += ret;
+      }
     }
-  } else {
-    size_t ret;
-    size_t offset = 0;
-    size_t size = env_t::get().upload_buffer_size;
-    unsigned char buff[size];
 
-    while((ret = ngx_read_file(&r->request_body->temp_file->file, buff, size, offset)) > 0) {
-      std::vector<uint8_t> data(buff, buff + ret);
-      request_wrapper->emit_data(data);
-      offset += ret;
-    }
-  }
-
-  // we are done reading request
-  request_wrapper->emit_end();
-  ngx_http_send_header(r);
-
-  // send the body and return the status code of the output filter chain
-  ngx_http_finalize_request(r, ngx_http_output_filter(r, request_wrapper->out));
-  delete request_wrapper;
-  ngx_pfree(r->pool, request_wrapper->out);
+    // we are done reading request
+    request_wrapper->emit_end();
+  });
+  t.detach();
 }
 
 static ngx_int_t ngx_hoc_interface_on_http_request(ngx_http_request_t *r) {
@@ -96,19 +94,15 @@ static ngx_int_t ngx_hoc_interface_on_http_request(ngx_http_request_t *r) {
     static_cast<long unsigned int>(r->uri.len)
   });
 
-  app_t::get().emit_request(*request_wrapper);
-
   // read request body
   ngx_int_t rc;
   rc = ngx_http_read_client_request_body(r, ngx_http_sample_put_handler);
 
   if (rc >= NGX_HTTP_SPECIAL_RESPONSE) {
     return rc;
-  } else if (rc == NGX_AGAIN) {
-    return NGX_DONE;
   }
 
-  return NGX_OK;
+  return NGX_DONE;
 }
 
 extern "C"

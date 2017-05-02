@@ -8,6 +8,8 @@
 #include <iostream>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <thread>
+#include <mutex>
 #include <hoc/util.h>
 
 extern "C" {
@@ -29,6 +31,7 @@ class req_t final {
 
     ngx_http_request_t *request_context;
     ngx_chain_t *out;
+    std::mutex origin;
 
     req_t(
       const header_list_t &_request_headers
@@ -43,6 +46,8 @@ class req_t final {
     ) : request_context(_request_context),
         out((ngx_chain_t*) ngx_pcalloc(_request_context->pool, sizeof(ngx_chain_t))),
         request_headers(_request_headers) {}
+
+    ~req_t();
 
     void on_data(const cb_data_t &fn);
     void on_end(const cb_void_t &fn);

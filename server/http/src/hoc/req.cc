@@ -22,6 +22,16 @@ void req_t::emit_end() {
   for (auto it = end_events.begin(); it != end_events.end(); ++it) {
     (*it)();
   }
+
+  lock_guard<mutex> guard(origin);
+  ngx_http_send_header(request_context);
+  ngx_http_finalize_request(request_context, ngx_http_output_filter(request_context, out));
+  delete this;
+}
+
+req_t::~req_t() {
+  lock_guard<mutex> guard(origin);
+  ngx_pfree(request_context->pool, out);
 }
 
 void req_t::send_body(const string &body) {
