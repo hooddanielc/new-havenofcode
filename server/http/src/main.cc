@@ -1,6 +1,4 @@
 #include <iostream>
-#include <thread>
-#include <mutex>
 #include <string>
 #include <cstdio>
 #include <fstream>
@@ -22,7 +20,6 @@ ngx_module_t current_module;
 std::mutex nginx_mutex;
 
 static void ngx_http_sample_put_handler(ngx_http_request_t *r) {
-  std::thread t([r]() {
     req_t *request_wrapper = reinterpret_cast<req_t*>(ngx_http_get_module_ctx(r, current_module));
     app_t::get().emit_request(*request_wrapper);
 
@@ -38,6 +35,8 @@ static void ngx_http_sample_put_handler(ngx_http_request_t *r) {
         cl = cl->next;
       }
     } else {
+      // request body is held in a temporary file. 
+      // read file and emit on_data event
       size_t ret;
       size_t offset = 0;
       size_t size = env_t::get().upload_buffer_size;
@@ -52,12 +51,9 @@ static void ngx_http_sample_put_handler(ngx_http_request_t *r) {
 
     // we are done reading request
     request_wrapper->emit_end();
-    lock_guard<mutex> guard(nginx_mutex);
     ngx_http_send_header(r);
     ngx_http_finalize_request(r, ngx_http_output_filter(r, request_wrapper->out));
     delete request_wrapper;
-  });
-  t.detach();
 }
 
 static ngx_int_t ngx_hoc_interface_on_http_request(ngx_http_request_t *r) {

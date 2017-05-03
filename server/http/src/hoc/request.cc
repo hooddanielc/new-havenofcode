@@ -3,6 +3,14 @@
 using namespace hoc;
 using namespace std;
 
+void request_t::init() {
+  curl_global_init(CURL_GLOBAL_ALL);
+}
+
+void request_t::cleanup() {
+  curl_global_cleanup();
+}
+
 size_t request_t::write_func(void *ptr, size_t size, size_t nmemb, request_t *cake) {
   for (auto it = cake->data_callbacks.begin(); it != cake->data_callbacks.end(); ++it) {
     (*it)(static_cast<char*>(ptr), size * nmemb);
@@ -23,7 +31,6 @@ size_t request_t::string_read_func(void *ptr, size_t, size_t, write_t *cake) {
 }
 
 request_t::request_t() {
-  curl_global_init(CURL_GLOBAL_ALL);
   curl = curl_easy_init();
   slist_headers = nullptr;
 
@@ -41,7 +48,6 @@ request_t::~request_t() {
   }
 
   curl_easy_cleanup(curl);
-  curl_global_cleanup();
 }
 
 void request_t::on_data(const cb_data_t &fn) {

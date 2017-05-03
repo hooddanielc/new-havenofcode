@@ -40,5 +40,6 @@ FIXTURE(post_write_body) {
 }
 
 int main(int argc, char *argv[]) {
+  request_t::init();
   return dj::lick::main(argc, argv);
 }

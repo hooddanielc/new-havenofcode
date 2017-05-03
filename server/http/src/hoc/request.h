@@ -20,6 +20,8 @@ namespace hoc {
       void on_data(const cb_data_t &fn);
       void send();
       void send(const std::string &data);
+      static void init();
+      static void cleanup();
 
     private:
       // prevent copy
