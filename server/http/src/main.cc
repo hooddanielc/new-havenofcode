@@ -1,4 +1,6 @@
 #include <iostream>
+#include <thread>
+#include <mutex>
 #include <string>
 #include <cstdio>
 #include <fstream>
@@ -17,6 +19,7 @@ using namespace std;
 using namespace hoc;
 
 ngx_module_t current_module;
+std::mutex nginx_mutex;
 
 static void ngx_http_sample_put_handler(ngx_http_request_t *r) {
   std::thread t([r]() {
@@ -49,6 +52,10 @@ static void ngx_http_sample_put_handler(ngx_http_request_t *r) {
 
     // we are done reading request
     request_wrapper->emit_end();
+    lock_guard<mutex> guard(nginx_mutex);
+    ngx_http_send_header(r);
+    ngx_http_finalize_request(r, ngx_http_output_filter(r, request_wrapper->out));
+    delete request_wrapper;
   });
   t.detach();
 }

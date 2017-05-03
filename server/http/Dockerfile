@@ -50,7 +50,13 @@ RUN cd /opt/aws-sdk-cpp/build && make install
 
 # build nginx module
 ADD ./ngx-loadable-cpp-module /root/ngx-loadable-cpp-module
-RUN cd ~/nginx-1.10.2 && ./configure --with-http_ssl_module --add-module=/root/ngx-loadable-cpp-module
+
+RUN cd ~/nginx-1.10.2 && ./configure \
+  --with-http_ssl_module \
+  --with-file-aio \
+  --with-threads \
+  --add-module=/root/ngx-loadable-cpp-module
+
 RUN cd ~/nginx-1.10.2 && make -j$(grep -c ^processor /proc/cpuinfo) && make install
 RUN rm ~/nginx-1.10.2.tar.gz
 
