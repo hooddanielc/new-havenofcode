@@ -9,7 +9,8 @@ namespace hoc {
     public:
       logout_route_t() : route_t<T>("/api/logout") {}
 
-      void get(T &req, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &session) override {
+      void get(T &req, const url_match_result_t &) override {
+        auto session = session_t<T>::make(req);
         if (!session->authenticated()) {
           return route_t<T>::fail_with_error(req, "no login");
         } else {

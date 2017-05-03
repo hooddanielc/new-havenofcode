@@ -14,7 +14,8 @@ public:
 
   // this route allows only current user
   // to be selected
-  void get(T &req, const url_match_result_t &match, std::shared_ptr<session_t<req_t>> &session) {
+  void get(T &req, const url_match_result_t &match) {
+    auto session = session_t<T>::make(req);
     if (session->authenticated() && match.params[0] == "me") {
       pqxx::work w(*session->db);
       std::stringstream ss;
@@ -37,7 +38,8 @@ class user_route_query_t : public route_t<T> {
 public:
   user_route_query_t() : route_t<T>("/api/users") {}
 
-  void get(T &req, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &session) {
+  void get(T &req, const url_match_result_t &) {
+    auto session = session_t<T>::make(req);
     try {
       auto args = req.query();
 

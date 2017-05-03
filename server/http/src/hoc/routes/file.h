@@ -20,7 +20,8 @@ class file_route_query_t : public route_t<T> {
 public:
   file_route_query_t() : route_t<T>("/api/files") {}
 
-  void get(T &req, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &session) {
+  void get(T &req, const url_match_result_t &) {
+    auto session = session_t<T>::make(req);
     try {
       if (!session->authenticated()) {
         return route_t<T>::fail_with_error(req, "login required", 403);
@@ -66,7 +67,7 @@ public:
       ss.clear();
       ss << "select aws_etag, aws_part_number, bytes, created_at, "
          << "created_by, id, pending, updated_at, file from file_part "
-         << "where pending = 'f' and created_by = current_account_id()";
+         << "where pending = 't' and created_by = current_account_id()";
       auto file_parts_result = w.exec(ss);
       auto files = to_json(result);
       auto file_parts = to_json(file_parts_result);
@@ -79,7 +80,8 @@ public:
     }
   }
 
-  void post(T &req, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &session) {
+  void post(T &req, const url_match_result_t &) {
+    auto session = session_t<T>::make(req);
     if (!session->authenticated()) {
       return route_t<T>::fail_with_error(req, "login required", 403);
     }
@@ -149,7 +151,8 @@ class file_single_route_t : public route_t<T> {
 public:
   file_single_route_t() : route_t<T>("/api/files/:id") {}
 
-  void put(T &req, const url_match_result_t &match, std::shared_ptr<session_t<req_t>> &session) {
+  void put(T &req, const url_match_result_t &match) {
+    auto session = session_t<T>::make(req);
     if (!session->authenticated()) {
       return route_t<T>::fail_with_error(req, "login required", 403);
     }
@@ -234,7 +237,8 @@ class file_part_route_t : public route_t<T> {
 public:
   file_part_route_t() : route_t<T>("/api/file-parts/:id") {}
 
-  void put(T &req, const url_match_result_t &match, std::shared_ptr<session_t<req_t>> &session) {
+  void put(T &req, const url_match_result_t &match) {
+    auto session = session_t<T>::make(req);
     if (!session->authenticated()) {
       return route_t<T>::fail_with_error(req, "login required", 403);
     }

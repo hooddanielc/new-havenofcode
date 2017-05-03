@@ -205,6 +205,10 @@ class session_t {
       w.commit();
       create_new_session(req);
     }
+
+    static std::shared_ptr<session_t> make(req_t &req) {
+      return std::shared_ptr<session_t>(new session_t(req));
+    }
 };
 
 } // hoc

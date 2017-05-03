@@ -14,7 +14,7 @@ class set_noreply_token_callback_route_t : public route_t<T> {
 public:
   set_noreply_token_callback_route_t() : route_t<T>("/api/set-noreply-callback") {}
 
-  void get(T &req, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &) override {
+  void get(T &req, const url_match_result_t &) override {
     req.on_end([&]() {
       req.send_header("Content-Type", "text/html");
       std::string args = req.args();

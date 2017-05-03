@@ -10,7 +10,8 @@ namespace hoc {
     public:
       login_route_t() : route_t<T>("/api/login") {}
 
-      void post(T &req, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &session) override {
+      void post(T &req, const url_match_result_t &) override {
+        auto session = session_t<T>::make(req);
         std::string *str = new std::string();
 
         req.on_data([str](const std::vector<uint8_t> &data) {

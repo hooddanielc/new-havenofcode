@@ -38,24 +38,24 @@ namespace hoc {
       route_t(std::string pat) : pattern(pat) {}
 
     public:
-      virtual void all(req_t &, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &) {};
-      virtual void get(req_t &, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &) {};
-      virtual void post(req_t &, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &) {};
-      virtual void put(req_t &, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &) {};
-      virtual void del(req_t &, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &) {};
+      virtual void all(req_t &, const url_match_result_t &) {};
+      virtual void get(req_t &, const url_match_result_t &) {};
+      virtual void post(req_t &, const url_match_result_t &) {};
+      virtual void put(req_t &, const url_match_result_t &) {};
+      virtual void del(req_t &, const url_match_result_t &) {};
 
-      void exec(req_t &req, const url_match_result_t &match, std::shared_ptr<session_t<req_t>> &session) {
+      void exec(req_t &req, const url_match_result_t &match) {
         auto method = req.method();
-        all(req, match, session);
+        all(req, match);
 
         if (method == "GET") {
-          this->get(req, match, session);
+          this->get(req, match);
         } else if (method == "POST") {
-          this->post(req, match, session);
+          this->post(req, match);
         } else if (method == "PUT") {
-          this->put(req, match, session);
+          this->put(req, match);
         } else if (method == "DELETE") {
-          this->del(req, match, session);
+          this->del(req, match);
         }
       };
 

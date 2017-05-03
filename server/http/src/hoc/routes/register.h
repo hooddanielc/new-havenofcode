@@ -14,7 +14,7 @@ namespace hoc {
     public:
       register_route_t() : route_t<T>("/api/register") {}
 
-      void post(T &req, const url_match_result_t &, std::shared_ptr<session_t<req_t>> &) override {
+      void post(T &req, const url_match_result_t &) override {
         auto str = new std::string("");
 
         req.on_data([str](const std::vector<uint8_t> &data) mutable {

@@ -31,20 +31,14 @@ namespace hoc {
   }
 
   void route_request(req_t &req) {
-    std::shared_ptr<session_t<req_t>> session(new session_t<req_t>(req));
-
     try {
       for (auto &route : routes) {
         auto match = route->match(req.uri().c_str());
 
         if (match.pass == true) {
-          route->exec(req, match, session);
+          route->exec(req, match);
         }
       }
-    } catch (runtime_error e) {
-      end_server_error(req, e.what());
-    } catch (logic_error e) {
-      end_server_error(req, e.what());
     } catch (exception e) {
       end_server_error(req, e.what());
     } catch (...) {
