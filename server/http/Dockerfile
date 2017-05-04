@@ -105,6 +105,9 @@ RUN mkdir $HOME/logs
 # add nginx config
 ADD ./config /root/config
 
+# add static files built seperately
+ADD ./website/dist /root/website/dist
+
 # expose ports
 EXPOSE 80
 

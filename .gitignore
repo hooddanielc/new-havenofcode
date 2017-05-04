@@ -5,4 +5,5 @@ server/http/out/debug
 server/http/out/release
 server/db/db-tools/node_modules
 server/db/db-tools/dist
+server/tmp/fake-s3
 *.DS_Store
