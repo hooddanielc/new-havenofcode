@@ -65,4 +65,4 @@ EXPOSE 5432
 # Allow backup
 VOLUME  ["/root/data"]
 
-CMD /bin/bash -c "postgres -D $HOME/data & && /bin/bash"
+CMD postgres -D $HOME/data
