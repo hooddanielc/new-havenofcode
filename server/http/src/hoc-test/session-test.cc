@@ -54,7 +54,7 @@ FIXTURE(anonymous_session) {
     EXPECT_EQ(r_for_session.size(), size_t(1));
   });
 
-  delete_test_accounts();
+  delete_all_user_data();
 }
 
 FIXTURE(anonymous_session_no_cookie_key) {
@@ -75,7 +75,7 @@ FIXTURE(anonymous_session_no_cookie_key) {
     EXPECT_EQ(session.id(), r_for_session[0][0].as<string>());
   });
 
-  delete_test_accounts();
+  delete_all_user_data();
 }
 
 FIXTURE(construct_authenticated_session) {
@@ -102,7 +102,7 @@ FIXTURE(construct_authenticated_session) {
     EXPECT_EQ(session.user_id(), r_session[0][1].as<string>());
   });
 
-  delete_test_accounts();
+  delete_all_user_data();
 }
 
 FIXTURE(anonymous_session_to_authenticated) {
@@ -130,7 +130,7 @@ FIXTURE(anonymous_session_to_authenticated) {
     EXPECT_EQ(session.user_id(), r_session[0][1].as<string>());
   });
 
-  delete_test_accounts();
+  delete_all_user_data();
 }
 
 FIXTURE(restore_session) {
@@ -152,7 +152,7 @@ FIXTURE(restore_session) {
     EXPECT_EQ(restored_session.user_id(), r_session[0][1].as<string>());
   });
 
-  delete_test_accounts();
+  delete_all_user_data();
 }
 
 FIXTURE(restore_session_user_agent_changed) {
@@ -168,7 +168,7 @@ FIXTURE(restore_session_user_agent_changed) {
     session_t<fixture_req_t> restored_session(req);
   });
 
-  delete_test_accounts();
+  delete_all_user_data();
 }
 
 FIXTURE(restore_anonymous_session) {
@@ -186,7 +186,7 @@ FIXTURE(restore_anonymous_session) {
     EXPECT_EQ(session.id(), restored_session.id());
   });
 
-  delete_test_accounts();
+  delete_all_user_data();
 }
 
 
@@ -211,7 +211,7 @@ FIXTURE(restoring_deleted_session_returns_new) {
     EXPECT_EQ(restored_session.authenticated(), false);
   });
 
-  delete_test_accounts();
+  delete_all_user_data();
 }
 
 int main(int argc, char *argv[]) {

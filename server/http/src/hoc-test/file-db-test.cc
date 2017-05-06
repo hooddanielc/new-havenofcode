@@ -47,7 +47,7 @@ FIXTURE(member_create_own_files) {
     EXPECT_EQ(count[0][0].as<int>(), 2);
   });
 
-  delete_test_accounts();
+  delete_all_user_data();
 }
 
 FIXTURE(member_cant_delete_other_files) {
@@ -70,7 +70,7 @@ FIXTURE(member_cant_delete_other_files) {
     EXPECT_EQ(not_deleted.size(), size_t(1));
   });
 
-  delete_test_accounts();
+  delete_all_user_data();
 }
 
 FIXTURE(member_cant_view_other_member_file_parts) {
@@ -82,7 +82,7 @@ FIXTURE(member_cant_view_other_member_file_parts) {
     EXPECT_EQ(res[0][0].as<int>(), 40);
   });
 
-  delete_test_accounts();
+  delete_all_user_data();
 }
 
 FIXTURE(member_can_complete_parts_and_view_completed) {
@@ -112,7 +112,7 @@ FIXTURE(member_can_complete_parts_and_view_completed) {
     }
   });
 
-  delete_test_accounts();
+  delete_all_user_data();
 }
 
 FIXTURE(create_upload_promise_for_small_file) {
@@ -146,7 +146,7 @@ FIXTURE(create_upload_promise_for_small_file) {
     EXPECT_EQ(file_parts[0][2].as<bool>(), true);
   });
 
-  delete_test_accounts();
+  delete_all_user_data();
 }
 
 FIXTURE(create_upload_promise_for_large_file) {
@@ -190,7 +190,7 @@ FIXTURE(create_upload_promise_for_large_file) {
     EXPECT_EQ(file_parts[10][2].as<bool>(), true);
   });
 
-  delete_test_accounts();
+  delete_all_user_data();
 }
 
 FIXTURE(cancel_upload_promise_for_small_file) {
@@ -213,7 +213,7 @@ FIXTURE(cancel_upload_promise_for_small_file) {
     EXPECT_EQ(called, false);
   });
 
-  delete_test_accounts();
+  delete_all_user_data();
 }
 
 FIXTURE(cancel_upload_promise_for_large_file) {
@@ -244,7 +244,7 @@ FIXTURE(cancel_upload_promise_for_large_file) {
     }
   });
 
-  delete_test_accounts();
+  delete_all_user_data();
 }
 
 FIXTURE(complete_file_part_promise_for_small_file) {
@@ -308,7 +308,7 @@ FIXTURE(complete_file_part_promise_for_small_file) {
     EXPECT_EQ(fp[0][1].as<bool>(), false);
   });
 
-  delete_test_accounts();
+  delete_all_user_data();
 }
 
 FIXTURE(complete_file_part_promise_for_large_file) {
@@ -377,7 +377,7 @@ FIXTURE(complete_file_part_promise_for_large_file) {
     }
   });
 
-  delete_test_accounts();
+  delete_all_user_data();
 }
 
 FIXTURE(failed_file_part_promise_rolls_back) {
@@ -492,7 +492,7 @@ FIXTURE(failed_file_part_promise_rolls_back) {
     }
   });
 
-  delete_test_accounts();
+  delete_all_user_data();
 }
 
 FIXTURE(complete_entire_file_promise_for_small_file) {
@@ -549,7 +549,7 @@ FIXTURE(complete_entire_file_promise_for_small_file) {
     EXPECT_EQ(finished_status[0][0].as<string>(), "complete");
   });
 
-  delete_test_accounts();
+  delete_all_user_data();
 }
 
 FIXTURE(complete_entire_file_promise_for_large_file) {
@@ -608,7 +608,7 @@ FIXTURE(complete_entire_file_promise_for_large_file) {
     EXPECT_EQ(finished_status[0][0].as<string>(), "complete");
   });
 
-  delete_test_accounts();
+  delete_all_user_data();
 }
 
 int main(int argc, char *argv[]) {
