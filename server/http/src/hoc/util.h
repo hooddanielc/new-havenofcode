@@ -12,6 +12,10 @@
 #include <ctype.h>
 #include <stdexcept>
 #include <pqxx/pqxx>
+#include <aws/core/Aws.h>
+#include <aws/core/client/ClientConfiguration.h>
+#include <aws/core/auth/AWSCredentialsProvider.h>
+#include <aws/s3/S3Client.h>
 #include <hoc/json.h>
 #include <hoc/env.h>
 
@@ -32,16 +36,17 @@ namespace hoc {
   void open_ifstream(std::ifstream &strm, const std::string &path);
   char *random_characters(size_t size);
   std::string camelify(std::string &str);
-  dj::json_t to_json(const pqxx::result &result);
+  dj::json_t::array_t to_json(const pqxx::result &result);
 
   template <typename as_t>
-  dj::json_t to_json_array(const pqxx::result &rows, int i) {
+  dj::json_t::array_t to_json_array(const pqxx::result &rows, int i) {
     dj::json_t::array_t result;
     for (auto it = rows.begin(); it != rows.end(); ++it) {
       result.emplace_back(it[i].as<as_t>());
     }
-    return move(result);
+    return result;
   }
 
   std::string random_tmp_path();
+  std::string get_s3_url(const dj::json_t &file);
 }

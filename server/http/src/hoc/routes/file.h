@@ -7,11 +7,11 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdio.h>
-
 #include <hoc/util.h>
 #include <hoc/route.h>
 #include <hoc/actions/file.h>
 #include <hoc/parsers/multipart.h>
+#include <hoc/env.h>
 
 namespace hoc {
 
@@ -54,7 +54,7 @@ public:
 
       pqxx::work w(*session->db);
       std::stringstream ss;
-      ss << "select id, created_at, updated_at, created_by, aws_key, "
+      ss << "select id, created_at, updated_at, created_by, aws_key, name, aws_bucket, "
          << "aws_region, bytes, status, progress from file where id is not null ";
 
       if (created_by != "") {
@@ -69,9 +69,14 @@ public:
          << "created_by, id, pending, updated_at, file from file_part "
          << "where pending = 't' and created_by = current_account_id()";
       auto file_parts_result = w.exec(ss);
-      auto files = to_json(result);
+      dj::json_t::array_t files = to_json(result);
       auto file_parts = to_json(file_parts_result);
       auto json = dj::json_t::empty_object;
+
+      for (auto it = files.begin(); it != files.end(); ++it) {
+        (*it)["url"] = get_s3_url((*it));
+      }
+
       json["files"] = std::move(files);
       json["fileParts"] = std::move(file_parts);
       route_t<T>::send_json(req, json, 200);

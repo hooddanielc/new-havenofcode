@@ -13,5 +13,6 @@ export default DS.Model.extend({
   progress: DS.attr('number'),
   type: DS.attr('string'),
   uploadId: DS.attr('string'),
-  fileParts: DS.hasMany('fileParts')
+  fileParts: DS.hasMany('fileParts'),
+  url: DS.attr('string')
 });

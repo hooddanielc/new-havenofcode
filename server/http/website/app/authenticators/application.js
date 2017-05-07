@@ -4,8 +4,10 @@ import Base from 'ember-simple-auth/authenticators/base';
 export default Base.extend({
   store: Ember.inject.service('store'),
 
-  restore: function () {
-    return this.get('store').findRecord('user', 'me');
+  restore: function (data) {
+    return this.get('store').findRecord('user', 'me').then((res) => {
+      return data;
+    });
   },
 
   authenticate: function (options) {

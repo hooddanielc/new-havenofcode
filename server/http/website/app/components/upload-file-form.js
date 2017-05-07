@@ -1,16 +1,14 @@
 import Ember from 'ember';
 
 export default Ember.Component.extend({
-  file: null,
-  savingInitialPromise: false,
-  queue: Ember.A(),
   store: Ember.inject.service('store'),
+  filesInProgress: Ember.A(),
 
   createPromises: function (files) {
-    const result = [];
+    const result = Ember.A();
 
     for (let i = 0; i < files.length; ++i) {
-      result.push(this.get('store').createRecord('file', {
+      result.pushObject(this.get('store').createRecord('file', {
         name: files[i].name,
         bytes: files[i].size,
         type: files[i].type
@@ -26,6 +24,8 @@ export default Ember.Component.extend({
   },
 
   uploadFile: function (file, fileObject) {
+    this.get('files').pushObject(file._internalModel);
+    window.theThis = this;
     const parts = file.get('fileParts');
     let start = 0;
     let end = 0;

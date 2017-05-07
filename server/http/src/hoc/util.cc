@@ -131,7 +131,7 @@ namespace hoc {
   }
 
   // convert postgres result to json array
-  dj::json_t to_json(const pqxx::result &result) {
+  dj::json_t::array_t to_json(const pqxx::result &result) {
     dj::json_t::array_t json;
 
     for (pqxx::tuple::size_type y = 0; y < result.size(); ++y) {
@@ -175,5 +175,25 @@ namespace hoc {
     p += '/';
     p.append(random_characters(50));
     return p;
+  }
+
+  std::string get_s3_url(const dj::json_t &file) {
+    Aws::Client::ClientConfiguration config;
+    config.region = file["awsRegion"].as<std::string>().c_str();
+
+    Aws::S3::S3Client client(Aws::Auth::AWSCredentials(
+      env_t::get().aws_key,
+      env_t::get().aws_secret
+    ), config);
+
+    const char *key = file["awsKey"].as<std::string>().substr(1).c_str();
+    const char *bucket = file["awsBucket"].as<std::string>().c_str();
+
+    return client.GeneratePresignedUrl(
+      bucket,
+      key,
+      Aws::Http::HttpMethod::HTTP_GET,
+      600000
+    ).c_str();
   }
 }
