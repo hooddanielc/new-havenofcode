@@ -70,19 +70,46 @@ std::ostream &operator<<(std::ostream &os, const primary_key_t<obj_t, type_t> &t
   return os;
 }
 
-template <typename obj_t>
-class foreign_key_t {
+template <typename obj_t, typename type_t>
+class foreign_key_of_t {
 public:
-  obj_t ref;
-  foreign_key_t &operator=(const obj_t &other) {
+  virtual foreign_key_of_t &operator=(const type_t &other) {
     ref = other;
     return *this;
   }
+
+  virtual type_t get_ref() const {
+    return ref;
+  }
+
+private:
+  type_t ref;
 };
 
-template <typename obj_t>
-std::ostream &operator<<(std::ostream &os, const foreign_key_t<obj_t> &) {
-  os << "foreign key references " << obj_t::table.name;
+template <typename obj_t, typename type_t, type_t obj_t::*ptr>
+class foreign_key_t: public foreign_key_of_t<obj_t, type_t> {
+public:
+  virtual foreign_key_t &operator=(const type_t &other) {
+    ref = other;
+    return *this;
+  }
+
+  virtual foreign_key_t &operator=(const obj_t &other) {
+    ref = other.*ptr;
+    return *this;
+  }
+
+  virtual type_t get_ref() const {
+    return ref;
+  }
+
+private:
+  type_t ref;
+};
+
+template <typename obj_t, typename type_t>
+std::ostream &operator<<(std::ostream &os, const foreign_key_of_t<obj_t, type_t> &key) {
+  os << "foreign key references " << obj_t::table.name << " : " << key.get_ref();
   return os;
 }
 
@@ -149,7 +176,7 @@ const table_t<model_a_t> model_a_t::table = {
 class model_b_t {
 public:
   primary_key_t<model_b_t, std::string> id;
-  foreign_key_t<model_a_t> foreign;
+  foreign_key_t<model_a_t, std::string, &model_a_t::id> foreign;
   std::string name;
   static const table_t<model_b_t> table;
 };
