@@ -70,24 +70,8 @@ std::ostream &operator<<(std::ostream &os, const primary_key_t<obj_t, type_t> &t
   return os;
 }
 
-template <typename obj_t, typename type_t>
-class foreign_key_of_t {
-public:
-  virtual foreign_key_of_t &operator=(const type_t &other) {
-    ref = other;
-    return *this;
-  }
-
-  virtual type_t get_ref() const {
-    return ref;
-  }
-
-private:
-  type_t ref;
-};
-
 template <typename obj_t, typename type_t, type_t obj_t::*ptr>
-class foreign_key_t: public foreign_key_of_t<obj_t, type_t> {
+class foreign_key_t {
 public:
   virtual foreign_key_t &operator=(const type_t &other) {
     ref = other;
@@ -107,8 +91,8 @@ private:
   type_t ref;
 };
 
-template <typename obj_t, typename type_t>
-std::ostream &operator<<(std::ostream &os, const foreign_key_of_t<obj_t, type_t> &key) {
+template <typename obj_t, typename type_t, type_t obj_t::*ptr>
+std::ostream &operator<<(std::ostream &os, const foreign_key_t<obj_t, type_t, ptr> &key) {
   os << "foreign key references " << obj_t::table.name << " : " << key.get_ref();
   return os;
 }
