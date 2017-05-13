@@ -1,6 +1,6 @@
 TMP=$(pwd)
 stop-http
-cd /root/src
+cd /home/developer/src
 ib main.so --cfg release
 rm -rf ../out/debug
 mv ../out/release ../out/debug

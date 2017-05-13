@@ -42,9 +42,9 @@ FIXTURE(register_account_update_already_registered) {
     auto c = db::super_user_connection();
     pqxx::work w(*c);
     actions::register_account("test@test.com", "password");
-    auto r1 = w.exec("select salt from registration");
+    auto r1 = w.exec("select salt from registration where email = 'test@test.com'");
     actions::register_account("test@test.com", "password");
-    auto r2 = w.exec("select salt from registration");
+    auto r2 = w.exec("select salt from registration where email = 'test@test.com'");
     EXPECT_NE(r1[0][0].as<string>(), r2[0][0].as<string>());
   });
 
@@ -59,7 +59,7 @@ FIXTURE(register_account_collision) {
 
     auto c = db::super_user_connection();
     pqxx::work w(*c);
-    auto r = w.exec("select verified, email from registration where verified = 'TRUE'");
+    auto r = w.exec("select verified, email from registration where verified = 'TRUE' and (email = 'test@test.com' or email = 'test_another@test.com')");
     EXPECT_EQ(r.size(), size_t(1));
     EXPECT_EQ(r[0][1].as<string>(), "test_another@test.com");
   });
@@ -110,7 +110,7 @@ FIXTURE(login_action) {
     auto c = db::member_connection("test@test.com", "password");
     pqxx::work w(*c);
     auto r_current_id = w.exec("select current_account_id()");
-    auto r_session = w.exec("select id, deleted, ip, user_agent from session");
+    auto r_session = w.exec("select id, deleted, ip, user_agent from session where created_by=current_account_id()");
     EXPECT_EQ(r[0][1].as<string>(), r_current_id[0][0].as<string>());
     EXPECT_EQ(r[0][0].as<string>(), r_session[0][0].as<string>());
     EXPECT_EQ(r_session[0][1].as<bool>(), false);

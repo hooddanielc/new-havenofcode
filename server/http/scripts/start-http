@@ -1,1 +1,1 @@
-nginx -c $HOME/config/nginx.conf
+sudo -E nginx -c /home/developer/config/nginx.conf

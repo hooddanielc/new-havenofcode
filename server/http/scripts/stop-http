@@ -1,1 +1,1 @@
-nginx -s stop
+sudo -E nginx -s stop

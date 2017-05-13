@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdlib>
+
 namespace hoc {
   class env_t final {
     public:

@@ -156,7 +156,7 @@ FIXTURE(restore_session) {
 }
 
 FIXTURE(restore_session_user_agent_changed) {
-  EXPECT_FAIL([]() {
+  EXPECT_OK([]() {
     actions::register_account("test@test.com", "password");
     actions::confirm_account("test@test.com", "password");
     fixture_req_t req;
@@ -166,29 +166,28 @@ FIXTURE(restore_session_user_agent_changed) {
     req.set_cookies["session"].push_back(r_session[0][0].as<string>());
     req.set_user_agent = "different";
     session_t<fixture_req_t> restored_session(req);
+    EXPECT_NE(restored_session.id(), login_session.id());
   });
 
   delete_all_user_data();
 }
 
 FIXTURE(restore_anonymous_session) {
-  EXPECT_FAIL([]() {
+  EXPECT_OK([]() {
     fixture_req_t req;
     session_t<fixture_req_t> session(req);
     pqxx::work w(*session.db);
     req.set_cookies["session"].push_back(session.id());
     req.set_user_agent = "different";
     session_t<fixture_req_t> restored_session(req);
-    EXPECT_EQ(req.last_header_key, "");
-    EXPECT_EQ(req.last_header_value, "");
+    EXPECT_EQ(req.last_header_key, "Set-Cookie");
     EXPECT_EQ(restored_session.authenticated(), false);
     EXPECT_EQ(restored_session.authenticated(), session.authenticated());
-    EXPECT_EQ(session.id(), restored_session.id());
+    EXPECT_NE(session.id(), restored_session.id());
   });
 
   delete_all_user_data();
 }
-
 
 FIXTURE(restoring_deleted_session_returns_new) {
   EXPECT_OK([]() {

@@ -60,7 +60,7 @@ namespace hoc {
   }
 
   void app_t::log(const std::string &out) {
-    ofstream log_file("/root/logs/stdout.log", ios_base::out | ios_base::app );
+    ofstream log_file("/home/developer/logs/stdout.log", ios_base::out | ios_base::app );
     log_file << out << endl;
   }
 }

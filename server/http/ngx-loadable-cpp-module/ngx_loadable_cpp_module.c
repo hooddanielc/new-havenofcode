@@ -10,10 +10,11 @@ ngx_module_t ngx_loadable_cpp_module;
 static char *ngx_hoc_init(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
   // Load the dynamic library
   void *ngx_hoc_interface_handle;
-  ngx_hoc_interface_handle = dlopen("/root/out/debug/main.so", RTLD_NOW);
+  ngx_hoc_interface_handle = dlopen("/home/developer/out/debug/main.so", RTLD_NOW);
 
   if (!ngx_hoc_interface_handle) {
-    ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "/root/out/debug/main.so shared library failed to load.");
+    fputs (dlerror(), stderr);
+    ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "/home/developer/out/debug/main.so shared library failed to load.");
     return NGX_CONF_ERROR;
   }
 
@@ -29,7 +30,7 @@ static char *ngx_hoc_init(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
       NGX_LOG_ERR,
       cf,
       0,
-      "/root/out/debug/main.so ngx_hoc_interface_init failed to link. %s", dlsym_error
+      "/home/developer/out/debug/main.so ngx_hoc_interface_init failed to link. %s", dlsym_error
     );
 
     dlclose(ngx_hoc_interface_handle);

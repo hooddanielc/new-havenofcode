@@ -92,11 +92,10 @@ namespace hoc {
     strm.exceptions(std::ios::badbit | std::ios::failbit);
   }
 
-  char *random_characters(size_t size) {
-    size_t count = 0;
-    char *bytes = static_cast<char *>(alloca(size));
+  std::string random_characters(size_t size) {
+    std::string result;
 
-    while (count != size) {
+    while (result.size() != size) {
       char *tmp = static_cast<char *>(alloca(size));
       {
         std::ifstream strm;
@@ -105,19 +104,17 @@ namespace hoc {
       }
 
       for (size_t i = 0; i < size; ++i) {
-        if (count == size) {
+        if (result.size() == size) {
           break;
         }
 
         if (isalnum(tmp[i])) {
-          bytes[count] = tmp[i];
-          count += 1;
+          result += tmp[i];
         }
       }
     }
 
-    bytes[count] = '\0';
-    return bytes;
+    return result;
   }
 
   string camelify(string &str) {

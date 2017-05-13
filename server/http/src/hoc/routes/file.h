@@ -54,8 +54,7 @@ public:
 
       pqxx::work w(*session->db);
       std::stringstream ss;
-      ss << "select id, created_at, updated_at, created_by, aws_key, name, aws_bucket, "
-         << "aws_region, bytes, status, progress from file where id is not null ";
+      ss << "select * from file where id is not null ";
 
       if (created_by != "") {
         ss << "and created_by = " << w.quote(created_by) << " ";
@@ -65,8 +64,7 @@ public:
       auto result = w.exec(ss);
       ss.str("");
       ss.clear();
-      ss << "select aws_etag, aws_part_number, bytes, created_at, "
-         << "created_by, id, pending, updated_at, file from file_part "
+      ss << "select * from file_part "
          << "where pending = 't' and created_by = current_account_id()";
       auto file_parts_result = w.exec(ss);
       dj::json_t::array_t files = to_json(result);
@@ -127,20 +125,18 @@ public:
       auto id = actions::create_upload_promise(session->db, name, strtoimax(bytes.c_str(), &endptr, 10));
       pqxx::work w(*session->db);
       std::stringstream ss;
-      ss << "select id, created_by, created_at, updated_at, name, "
-         << "aws_key, aws_region, bytes, status, progress, upload_id "
-         << "from file where id = " << w.quote(id);
+      ss << "select * from file where id = " << w.quote(id);
       auto file_query = w.exec(ss);
 
       // select all the file_parts
       ss.str("");
       ss.clear();
-      ss << "select id, created_at, updated_at, bytes, aws_etag, "
-         << "aws_part_number, pending, created_by "
-         << "from file_part where file = " << w.quote(id) << " order by aws_part_number asc";
+      ss << "select * from file_part where "
+         << "file = " << w.quote(id) << " "
+         << "order by aws_part_number asc";
       auto file_part_query = w.exec(ss);
       auto files = to_json(file_query);
-      auto file_part_ids = to_json_array<std::string>(file_part_query, 0);
+      auto file_part_ids = to_json_array<std::string>(file_part_query, "id");
       auto file_parts = to_json(file_part_query);
       auto response = dj::json_t::empty_object;
       response["files"] = files;
@@ -227,8 +223,7 @@ public:
       std::stringstream ss;
       ss << "update file set name = " << w_update.quote(u_name) << ", "
          << "type = " << w_update.quote(u_type) << " where id = " << w_update.quote(*file_id) << " "
-         << "returning id, created_by, created_at, updated_at, name, "
-         << "aws_key, aws_region, bytes, status, progress, upload_id";
+         << "returning *";
       auto query = w_update.exec(ss);
       auto response = dj::json_t::empty_object;
       response["file"] = to_json(query)[0];
@@ -309,8 +304,7 @@ public:
       actions::complete_file_part_promise(session->db, *file_part_id, *path);
       pqxx::work w(*session->db);
       std::stringstream ss;
-      ss << "select aws_etag, aws_part_number, bytes, created_at, "
-         << "created_by, id, pending, updated_at, file from file_part "
+      ss << "select * from file_part "
          << "where id = " << w.quote(*file_part_id);
       auto res = w.exec(ss);
       auto json = dj::json_t::empty_object;

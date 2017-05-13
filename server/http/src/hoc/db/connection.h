@@ -60,7 +60,8 @@ inline std::shared_ptr<pqxx::connection> member_connection(
   ss.str(std::string());
   ss.clear();
   std::string new_salt(random_characters(32));
-  ss << "update account set salt = " << w.quote(new_salt);
+  ss << "update account set salt = " << w.quote(new_salt) << " "
+     << "where email = " << w.quote(email);
   w_for_user.exec(ss);
 
   ss.str(std::string());

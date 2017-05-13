@@ -1,85 +1,71 @@
 FROM dhoodlum/base-environment
 
-# install ib
-RUN git clone https://github.com/JasonL9000/ib.git ~/ib
-RUN apt install -y python
+# install deps
+RUN sudo pacman --noconfirm -S postgresql libpqxx
+RUN sudo pacman --noconfirm -S curl
+RUN sudo pacman --noconfirm -S zlib
+RUN sudo pacman --noconfirm -S libutil-linux
+RUN sudo pacman --noconfirm -S gsasl
+RUN sudo pacman --noconfirm -S gnutls
+RUN sudo pacman --noconfirm -S gtk3
 
-#install postgres
-RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main" >> /etc/apt/sources.list
-RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | \
-  apt-key add -
-RUN apt update
-RUN apt install -y postgresql-9.6
-RUN apt install -y libpq-dev
-RUN apt install -y build-essential
-RUN apt install -y libpcre3 libpcre3-dev
-RUN apt install -y zlib1g zlib1g-dev
-RUN apt install -y libssl-dev
-RUN apt install -y libcurl4-gnutls-dev
-RUN apt install -y libpqxx-dev
-RUN apt install -y libgmp-dev
-RUN apt install -y cmake
-RUN apt install -y libicu-dev
-RUN apt install -y gnutls-dev
-RUN apt install -y libgsasl7-dev
-RUN apt install -y libboost-all-dev
-RUN apt install -y libgtk-3-dev
-RUN apt install -y libgcc-4.9-dev
+# download nginx
+RUN cd ~ && wget http://nginx.org/download/nginx-1.13.0.tar.gz
+RUN cd ~ && tar -xvf nginx-1.13.0.tar.gz
 
-# download sources
-RUN cd /opt && git clone https://github.com/kisli/vmime.git
-RUN cd ~ && wget http://nginx.org/download/nginx-1.10.2.tar.gz
-RUN cd ~ && tar -xvf nginx-1.10.2.tar.gz
-RUN cd /opt && git clone --branch 1.0.101 https://github.com/aws/aws-sdk-cpp.git
+# download libvmime
+RUN sudo mkdir /opt/libvmime && sudo chown -R developer /opt/libvmime
+RUN git clone https://aur.archlinux.org/libvmime.git /opt/libvmime
+
+# download aws-sdk-cpp
+RUN sudo mkdir /opt/aws-sdk-cpp && sudo chown developer /opt/aws-sdk-cpp
+RUN git clone --branch 1.0.127 https://github.com/aws/aws-sdk-cpp.git /opt/aws-sdk-cpp
 
 # build vmime
-RUN cd /opt/vmime && cmake . \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_INSTALL_PREFIX=/usr \
-  -DVMIME_TLS_SUPPORT_LIB=openssl
-RUN cd /opt/vmime && make -j$(grep -c ^processor /proc/cpuinfo)
-RUN cd /opt/vmime && make install
+RUN cd /opt/libvmime && makepkg --noconfirm -s
+RUN sudo pacman --noconfirm -U /opt/libvmime/*.pkg.tar.xz
 
 # build aws c++ sdk
-RUN mkdir /opt/aws-sdk-cpp/build
-RUN cd /opt/aws-sdk-cpp/build && cmake \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DBUILD_ONLY="s3" ..
+RUN mkdir /opt/aws-sdk-cpp/build && cd /opt/aws-sdk-cpp/build && cmake \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_ONLY="s3" ..
 RUN cd /opt/aws-sdk-cpp/build && make -j$(grep -c ^processor /proc/cpuinfo)
-RUN cd /opt/aws-sdk-cpp/build && make install
+RUN cd /opt/aws-sdk-cpp/build && sudo make install
 
 # build nginx module
-ADD ./ngx-loadable-cpp-module /root/ngx-loadable-cpp-module
+ADD ./ngx-loadable-cpp-module /home/developer/ngx-loadable-cpp-module
 
-RUN cd ~/nginx-1.10.2 && ./configure \
+RUN cd ~/nginx-1.13.0 && ./configure \
   --with-http_ssl_module \
   --with-file-aio \
   --with-threads \
-  --add-module=/root/ngx-loadable-cpp-module
+  --add-module=/home/developer/ngx-loadable-cpp-module
 
-RUN cd ~/nginx-1.10.2 && make -j$(grep -c ^processor /proc/cpuinfo) && make install
-RUN rm ~/nginx-1.10.2.tar.gz
+RUN cd ~/nginx-1.13.0 && make -j$(grep -c ^processor /proc/cpuinfo) && sudo make install
+RUN rm ~/nginx-1.13.0.tar.gz
 
 # setup
 RUN echo 'cd $HOME' >> $HOME/.zshrc
 
 # set path
-ENV PATH $PATH:/usr/local/nginx/sbin:/root/ib:/root/scripts
+ENV PATH $PATH:/usr/local/nginx/sbin:/opt/ib:/home/developer/scripts
 
 # add dev scripts
-ADD ./scripts /root/scripts
+ADD ./scripts /home/developer/scripts
+
+# build nginx module before setting environment flags
+ADD ./src /home/developer/src
 
 # build nginx module
-ADD ./src /root/src
 RUN cd $HOME/src && ib main.so
 
 # environment env
 ENV HOC_DOMAIN havenofcode.com
-ENV HOC_HTTP_UPLOAD_TEMP_PATH /root/tmp
+ENV HOC_HTTP_UPLOAD_TEMP_PATH /home/developer/tmp
 ENV HOC_HTTP_UPLOAD_BUFFER_SIZE 16000
 
-# add directory for debuggin uploads
-RUN mkdir /root/tmp
+# add directory for debugging uploads
+RUN mkdir /home/developer/tmp
 
 # db env
 ENV HOC_DB_NAME hoc_dev
@@ -103,13 +89,13 @@ ENV HOC_MOCK_S3_UPLOADS 1
 RUN mkdir $HOME/logs
 
 # add nginx config
-ADD ./config /root/config
+ADD ./config /home/developer/config
 
 # add static files built seperately
-ADD ./website/dist /root/website/dist
+ADD ./website/dist /home/developer/website/dist
 
 # expose ports
 EXPOSE 80
 
 # run nginx
-CMD nginx -g "daemon off;" -c $HOME/config/nginx.conf
+CMD sudo nginx -g "daemon off;" -c $HOME/config/nginx.conf

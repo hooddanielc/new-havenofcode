@@ -28,7 +28,7 @@ public:
       json["user"]["id"] = session->user_id();
       route_t<T>::send_json(req, json, 200);
     } else {
-      return route_t<T>::fail_with_error(req, "login required");
+      return route_t<T>::fail_with_error(req, "login required", 403);
     }
   }
 };

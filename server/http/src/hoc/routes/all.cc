@@ -37,6 +37,7 @@ namespace hoc {
 
         if (match.pass == true) {
           route->exec(req, match);
+          break;
         }
       }
     } catch (exception e) {

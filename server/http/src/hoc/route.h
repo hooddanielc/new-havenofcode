@@ -74,10 +74,6 @@ namespace hoc {
         req.send_body(out);
       }
 
-      std::string get_pattern() {
-        return pattern;
-      };
-
       url_match_result_t match(const char *url) {
         // gather a list of tokens
 
@@ -90,7 +86,7 @@ namespace hoc {
         };
 
         state_t state(start);
-        const char *c = get_pattern().c_str();
+        const char *c = pattern.c_str();
         std::string tmp;
         std::vector<url_token_t> tokens;
 

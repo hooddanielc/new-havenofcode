@@ -86,7 +86,7 @@ pqxx::result register_account(const std::string &email, const std::string &passw
        << ") returning id, password";
   } else {
     ss << "update registration set "
-       << "salt = " << w.quote(salt) << ","
+       << "salt = " << w.quote(salt) << ", "
        << "password = md5(" << w.quote(password + salt) << ") "
        << "where email = " << w.quote(email) << " "
        << "returning id, password";

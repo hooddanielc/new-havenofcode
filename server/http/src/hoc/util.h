@@ -34,7 +34,7 @@ namespace hoc {
   }
 
   void open_ifstream(std::ifstream &strm, const std::string &path);
-  char *random_characters(size_t size);
+  std::string random_characters(size_t size);
   std::string camelify(std::string &str);
   dj::json_t::array_t to_json(const pqxx::result &result);
 
@@ -43,6 +43,16 @@ namespace hoc {
     dj::json_t::array_t result;
     for (auto it = rows.begin(); it != rows.end(); ++it) {
       result.emplace_back(it[i].as<as_t>());
+    }
+    return result;
+  }
+
+  template <typename as_t>
+  dj::json_t::array_t to_json_array(const pqxx::result &rows, const char *name) {
+    dj::json_t::array_t result;
+    auto num = rows.column_number(name);
+    for (auto it = rows.begin(); it != rows.end(); ++it) {
+      result.emplace_back(it[num].as<as_t>());
     }
     return result;
   }

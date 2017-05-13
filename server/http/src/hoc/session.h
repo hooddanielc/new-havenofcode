@@ -62,6 +62,7 @@ class session_t {
          << "user_agent from session where "
          << "id = " << w.quote(session_cookie) << " and "
          << "deleted = 'FALSE'";
+
       auto r_current_session = w.exec(ss);
 
       if (r_current_session.size() == 0) {
@@ -135,7 +136,11 @@ class session_t {
       auto cookies = req.cookies();
 
       if (cookies.count("session") && cookies["session"].size() == 1) {
-        restore_session(req, cookies);
+        try {
+          restore_session(req, cookies);
+        } catch (const std::exception &) {
+          create_new_session(req);
+        }
       } else {
         create_new_session(req);
       }

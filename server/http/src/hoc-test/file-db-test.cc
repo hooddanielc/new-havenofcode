@@ -39,6 +39,8 @@ void member_insert_files() {
 }
 
 FIXTURE(member_create_own_files) {
+  delete_all_user_data();
+
   EXPECT_OK([]() {
     member_insert_files();
     auto c = db::super_user_connection();
@@ -116,6 +118,8 @@ FIXTURE(member_can_complete_parts_and_view_completed) {
 }
 
 FIXTURE(create_upload_promise_for_small_file) {
+  delete_all_user_data();
+
   EXPECT_OK([]() {
     actions::register_account("test@test.com", "password");
     actions::confirm_account("test@test.com", "password");
@@ -163,31 +167,37 @@ FIXTURE(create_upload_promise_for_large_file) {
       generated_key = key;
       return "imanuploadid";
     });
+
     EXPECT_EQ(called, true);
     pqxx::work w(*c);
     auto files = w.exec(
       "select id, name, bytes, upload_id, aws_key from file where id = " + w.quote(file_id)
     );
+
     EXPECT_EQ(files.size(), size_t(1));
     EXPECT_EQ(files[0][0].as<string>(), file_id);
     EXPECT_EQ(files[0][1].as<string>(), "name");
     EXPECT_EQ(files[0][2].as<string>(), "50000001");
     EXPECT_EQ(files[0][3].as<string>(), "imanuploadid");
     EXPECT_EQ(files[0][4].as<string>(), generated_key);
+
     auto file_parts = w.exec(
       "select bytes, aws_part_number, pending "
       "from file_part where file = " + w.quote(file_id) + " "
       "order by aws_part_number asc"
     );
-    EXPECT_EQ(file_parts.size(), size_t(11));
-    for (int i = 0; i < 10; ++i) {
-      EXPECT_EQ(file_parts[i][0].as<string>(), "5000000");
+
+    EXPECT_EQ(file_parts.size(), size_t(10));
+
+    for (int i = 0; i < 9; ++i) {
+      EXPECT_EQ(file_parts[i][0].as<string>(), "5242880");
       EXPECT_EQ(file_parts[i][1].as<int>(), i + 1);
       EXPECT_EQ(file_parts[i][2].as<bool>(), true);
     }
-    EXPECT_EQ(file_parts[10][0].as<string>(), "1");
-    EXPECT_EQ(file_parts[10][1].as<int>(), 11);
-    EXPECT_EQ(file_parts[10][2].as<bool>(), true);
+
+    EXPECT_EQ(file_parts[9][0].as<string>(), "2814081");
+    EXPECT_EQ(file_parts[9][1].as<int>(), 10);
+    EXPECT_EQ(file_parts[9][2].as<bool>(), true);
   });
 
   delete_all_user_data();
@@ -316,7 +326,7 @@ FIXTURE(complete_file_part_promise_for_large_file) {
     actions::register_account("test@test.com", "password");
     actions::confirm_account("test@test.com", "password");
     auto c = db::member_connection("test@test.com", "password");
-    auto file_id = actions::create_upload_promise(c, "name", 5000001, [](const string &, const string &, const string &) {
+    auto file_id = actions::create_upload_promise(c, "name", 5242881, [](const string &, const string &, const string &) {
       return "asdf";
     });
     string file_name = "file_name.exe";
@@ -385,7 +395,7 @@ FIXTURE(failed_file_part_promise_rolls_back) {
     actions::register_account("test@test.com", "password");
     actions::confirm_account("test@test.com", "password");
     auto c = db::member_connection("test@test.com", "password");
-    auto file_id = actions::create_upload_promise(c, "name", 5000001, [](const string &, const string &, const string &) {
+    auto file_id = actions::create_upload_promise(c, "name", 5242881, [](const string &, const string &, const string &) {
       return "asdf";
     });
     string file_name = "file_name.exe";
@@ -557,7 +567,7 @@ FIXTURE(complete_entire_file_promise_for_large_file) {
     actions::register_account("test@test.com", "password");
     actions::confirm_account("test@test.com", "password");
     auto c = db::member_connection("test@test.com", "password");
-    auto file_id = actions::create_upload_promise(c, "name", 10000001, [](const string &, const string &, const string &) {
+    auto file_id = actions::create_upload_promise(c, "name", 10485761, [](const string &, const string &, const string &) {
       return "asdf";
     });
     pqxx::work w1(*c);

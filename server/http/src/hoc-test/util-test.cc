@@ -12,6 +12,10 @@ FIXTURE(random_characters) {
     EXPECT_EQ(chars.size(), size_t(50));
     for (auto it = chars.begin(); it != chars.end(); ++it) {
       EXPECT_TRUE(isalnum(*it));
+
+      if (!isalnum(*it)) {
+        return;
+      }
     }
   }
 }

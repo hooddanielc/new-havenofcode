@@ -1,6 +1,6 @@
 TMP=$(pwd)
 stop-http
-cd /root/src
+cd /home/developer/src
 ib main.so
 start-http
 cd $TMP

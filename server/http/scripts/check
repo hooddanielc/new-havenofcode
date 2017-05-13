@@ -1,20 +1,21 @@
 TMP=$(pwd)
-cd /root/src
+cd /home/developer/src
 stop-http
 start-http
+#set -e
 
-for file in /root/src/**/*-test.cc
+for file in /home/developer/src/**/*-test.cc
 do
   filename="${file%.*}"
   echo "building ${filename}"
-  rel=$(realpath --relative-to="/root/src" "$filename")
+  rel=$(realpath --relative-to="/home/developer/src" "$filename")
   ib $rel
 done
 
-for file in /root/src/**/*-test.cc
+for file in /home/developer/src/**/*-test.cc
 do
   filename="${file%.*}"
-  rel=$(realpath --relative-to="/root/src" "$filename")
+  rel=$(realpath --relative-to="/home/developer/src" "$filename")
   ../out/debug/$rel
 done
 
