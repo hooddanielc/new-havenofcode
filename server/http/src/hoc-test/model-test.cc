@@ -515,10 +515,25 @@ public:
       : name(std::move(name_)), cols(std::move(cols_)) {
     assert(!singleton);
     singleton = this;
+
+    for (const auto &col: cols) {
+      if (col->is_primary_key()) {
+        primary_col_name = col->name;
+        break;
+      }
+    }
+
+    if (primary_col_name.empty()) {
+      throw std::runtime_error("table must have at least one primary_key_t");
+    }
   }
 
   ~table_t() {
     singleton = nullptr;
+  }
+
+  std::string get_primary_col_name() const noexcept {
+    return primary_col_name;
   }
 
   table_t *get_table() const noexcept {
@@ -552,8 +567,7 @@ public:
         }
       }
     }
-    std::string empty;
-    return empty;
+    throw std::runtime_error("column does not exist, did you forget to make_col?");
   }
 
   /*
@@ -572,8 +586,7 @@ public:
         }
       }
     }
-    std::string empty;
-    return empty;
+    throw std::runtime_error("column does not exist, did you forget to make_col?");
   }
 
   /*
@@ -592,8 +605,7 @@ public:
         }
       }
     }
-    std::string empty;
-    return empty;
+    throw std::runtime_error("column does not exist, did you forget to make_col?");
   }
 
   std::vector<std::shared_ptr<any_col_of_t<obj_t>>> get_cols() const {
@@ -603,35 +615,188 @@ public:
 private:
 
   table_t *singleton;
+  std::string primary_col_name;
   std::vector<std::shared_ptr<any_col_of_t<obj_t>>> cols;
 
 };  // table_t<obj_t>
 
-template <typename model_t>
+template <typename obj_t, typename val_t>
 class pqxx_adapter_t {
 public:
+  const primary_key_t<val_t> (obj_t::*p2m);
 
-  // todo
-  template <typename primary_val_t>
-  pqxx_adapter_t &find(const primary_val_t &val) {
+  pqxx_adapter_t(primary_key_t<val_t> (obj_t::*p2m_)) : p2m(p2m_) {}
+
+  /*
+   * find_by(key, value)
+   * ============================================= */
+  pqxx_adapter_t &find(const val_t &val) {
+    find_toks.push_back(str(val));
     return *this;
   }
 
-  // todo
-  template <typename obj_t, typename val_t>
-  pqxx_adapter_t & find_by(
-    val_t (obj_t::*)
+  /*
+   * find_by(key, value)
+   * ============================================= */
+  pqxx_adapter_t &find_by(const std::string &key, const std::string &val) {
+    find_by_toks[key] = str(val);
+    return *this;
+  }
+
+  template <typename col_val_t>
+  pqxx_adapter_t &find_by(
+    col_val_t (obj_t::*p2m),
+    const decltype(col_val_t()) &val
   ) {
+    auto name = obj_t::table.get_col_name(p2m);
+    find_by_toks[name] = str(val);
     return *this;
   }
 
-  // todo where
+  pqxx_adapter_t &find_by(
+    primary_key_t<val_t> (obj_t::*p2m),
+    const val_t &val
+  ) {
+    auto name = obj_t::table.get_col_name(p2m);
+    find_by_toks[name] = str(val);
+    return *this;
+  }
+
+  template <typename target_t, typename col_val_t>
+  pqxx_adapter_t &find_by(
+    foreign_key_t<target_t, col_val_t> (obj_t::*p2m),
+    const decltype(col_val_t()) &val
+  ) {
+    auto name = obj_t::table.get_col_name(p2m);
+    find_by_toks[name] = str(val);
+    return *this;
+  }
+
+  /*
+   * where(statement)
+   * ============================================= */
+  pqxx_adapter_t &where(const std::string &stmt) {
+    where_toks.push_back(stmt);
+    return *this;
+  }
+
+  /*
+   * order(key, direction = asc)
+   * ============================================= */
+  pqxx_adapter_t &order(const std::string &key, const std::string &direction = "asc") {
+    order_toks[key] = direction;
+    return *this;
+  }
+
+  template <typename col_val_t>
+  pqxx_adapter_t &order(
+    col_val_t (obj_t::*p2m),
+    const std::string &direction = "asc"
+  ) {
+    auto name = obj_t::table.get_col_name(p2m);
+    order_toks[name] = direction;
+    return *this;
+  }
+
+  pqxx_adapter_t &order(
+    primary_key_t<val_t> (obj_t::*p2m),
+    const std::string &direction = "asc"
+  ) {
+    auto name = obj_t::table.get_col_name(p2m);
+    order_toks[name] = direction;
+    return *this;
+  }
+
+  template <typename target_t, typename col_val_t>
+  pqxx_adapter_t &order(
+    foreign_key_t<target_t, col_val_t> (obj_t::*p2m),
+    const std::string &direction = "asc"
+  ) {
+    auto name = obj_t::table.get_col_name(p2m);
+    order_toks[name] = direction;
+    return *this;
+  }
+
+  /*
+   * Joins
+   * ============================== */
+  template <typename target_obj_t>
+  pqxx_adapter_t &joins(
+    foreign_key_t<obj_t, val_t> (target_obj_t::*)
+  ) {
+    auto primary_col_name = target_obj_t::table.get_primary_col_name();
+    join_toks[target_obj_t::table.name] = primary_col_name;
+    return *this;
+  }
+
+  /*
+   * Print debug output
+   * ======================= */
+  template <typename list_type_t>
+  void print_list(const std::string name, std::vector<list_type_t> &list, std::ostream &strm) {
+    strm << "  " << name << std::endl;
+    for (const auto &item : list) {
+      strm << "    " << item << std::endl;
+    }
+    strm << std::endl;
+  }
+
+  void print_map(const std::string &name, std::unordered_map<std::string, std::string> &list, std::ostream &strm) {
+    strm << "  " << name << std::endl;
+    for (const auto &item : list) {
+      strm << "    " << item.first << " : " << item.second << std::endl;
+    }
+    strm << std::endl;
+  }
+
+  void write(std::ostream &strm) {
+    strm << "pqxx_adapter_t<" << obj_t::table.name << ">" << std::endl;
+    print_list("find_toks", find_toks, strm);
+    print_list("where_toks", where_toks, strm);
+    print_map("find_by_toks", find_by_toks, strm);
+    print_map("order_toks", order_toks, strm);
+    print_map("join_toks", join_toks, strm);
+  }
+
+  // todo create_with
+  // todo group
+  // todo having
+  // todo distinct
+  // todo includes
+  // todo joins
+  // todo left_outer_joins
+  // todo limit
+  // todo lock
+  // todo none
+  // todo offset
+  // todo readonly
+  // todo references
+  // todo reorder
+  // todo reverse_order
+  // todo select
 
 private:
-  bool is_distinct;
-  std::vector<std::string> where;
-  std::vector<std::string> order;
+  std::vector<val_t> find_toks;
+  std::vector<std::string> where_toks;
+  std::unordered_map<std::string, std::string> find_by_toks;
+  std::unordered_map<std::string, std::string> order_toks;
+  std::unordered_map<std::string, std::string> join_toks;
+
+  template <typename col_val_t>
+  std::string str(const col_val_t &val) {
+    std::stringstream ss;
+    ss << val;
+    return ss.str();
+  }
 };  // pqxx_adapter_t<model_t>
+
+template <typename obj_t, typename val_t>
+pqxx_adapter_t<obj_t, val_t> make_adapter(
+  primary_key_t<val_t> (obj_t::*p2m)
+) {
+  pqxx_adapter_t<obj_t, val_t> adapter(p2m);
+  return adapter;
+}
 
 // * ==================================
 // * time to test ^.^
@@ -647,6 +812,10 @@ public:
 
   int age;
 
+  double opacity;
+
+  int64_t huge_num;
+
   static const table_t<model_a_t> table;
 
 };
@@ -654,6 +823,8 @@ public:
 const table_t<model_a_t> model_a_t::table = {
   "model_a_t", {
     make_col("id", &model_a_t::id),
+    make_col("opacity", &model_a_t::opacity),
+    make_col("huge_num", &model_a_t::huge_num),
     make_col("age", &model_a_t::age)
   }
 };  // model_a_t
@@ -680,6 +851,38 @@ const table_t<model_b_t> model_b_t::table = {
     make_col("name", &model_b_t::name)
   }
 };  // model_b_t
+
+FIXTURE(adapter) {
+  auto subject = make_adapter(&model_a_t::id);
+  subject.find_by(&model_a_t::age, 321);
+  subject.find("123");
+  subject.find("321");
+  subject.find_by("id", "123");
+  subject.find_by(&model_a_t::id, "321");
+  subject.find_by(&model_a_t::opacity, 0.1);
+  subject.find_by(&model_a_t::huge_num, 1000000);
+  subject.where("id > 0");
+  subject.where("id is not null");
+  subject.order("id", "asc");
+  subject.order(&model_a_t::id, "asc");
+  subject.order(&model_a_t::age, "asc");
+  subject.order(&model_a_t::opacity, "desc");
+  subject.joins(&model_b_t::foreign);
+  subject.write(std::cout);
+
+  auto related_subject = make_adapter(&model_b_t::id);
+  related_subject.find("123");
+  related_subject.find("321");
+  related_subject.find_by("id", "123");
+  related_subject.find_by(&model_b_t::id, "321");
+  related_subject.find_by(&model_b_t::foreign, "321");
+  related_subject.find_by(&model_b_t::name, "this is name");
+  related_subject.where("id > 0");
+  related_subject.where("id is not null");
+  related_subject.order("id", "asc");
+  related_subject.order(&model_b_t::foreign, "desc");
+  related_subject.write(std::cout);
+}
 
 FIXTURE(valuable_t) {
   valuable_t<int> subject = 5;
@@ -806,8 +1009,6 @@ FIXTURE(test_assignment) {
 }
 
 FIXTURE(pqxx_adapter_t) {
-  pqxx_adapter_t<model_a_t> adapter;
-
   model_a_t instance_a;
   instance_a.id = "young self";
   instance_a.age = 23;
