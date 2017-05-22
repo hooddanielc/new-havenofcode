@@ -1,10 +1,8 @@
+#include <hoc-test/test-helper.h>
+
 #include <string>
-#include <lick/lick.h>
 #include <functional>
 #include <hoc/json.h>
-#include <hoc-test/fixtures.h>
-#include <hoc/db/connection.h>
-#include <hoc/actions/account.h>
 
 using namespace std;
 using namespace hoc;
@@ -159,5 +157,5 @@ FIXTURE(restore_session_action) {
 }
 
 int main(int argc, char *argv[]) {
-  return dj::lick::main(argc, argv);
+  return test_main(argc, argv);
 }

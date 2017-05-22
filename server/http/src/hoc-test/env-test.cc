@@ -1,4 +1,5 @@
-#include <lick/lick.h>
+#include <hoc-test/test-helper.h>
+
 #include <string>
 #include <hoc/env.h>
 
@@ -7,8 +8,8 @@ using namespace hoc;
 
 FIXTURE(environment_variables) {
   EXPECT_EQ(string(env_t::get().host), "havenofcode.com");
-  EXPECT_EQ(string(env_t::get().db_name), "hoc_dev");
-  EXPECT_EQ(string(env_t::get().db_user), "admin_dev");
+  EXPECT_EQ(string(env_t::get().db_name), "hoc_test");
+  EXPECT_EQ(string(env_t::get().db_user), "admin_test");
   EXPECT_EQ(string(env_t::get().db_pass), "123123");
   EXPECT_EQ(string(env_t::get().db_host), "hoc-db");
   EXPECT_EQ(std::string(env_t::get().google_api_client_id), "XXXXXXXX");
@@ -23,5 +24,5 @@ FIXTURE(environment_variables) {
 }
 
 int main(int argc, char *argv[]) {
-  return dj::lick::main(argc, argv);
+  return test_main(argc, argv);
 }

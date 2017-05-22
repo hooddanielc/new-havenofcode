@@ -1,6 +1,7 @@
 TMP=$(pwd)
 cd /home/developer/src
 stop-http
+ib main.so
 start-http
 #set -e
 

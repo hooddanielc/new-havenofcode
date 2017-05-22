@@ -1,9 +1,7 @@
-#include <lick/lick.h>
+#include <hoc-test/test-helper.h>
+
 #include <vector>
 #include <map>
-#include <hoc-test/fixtures.h>
-#include <hoc/db/connection.h>
-#include <hoc/actions/account.h>
 #include <hoc/session.h>
 
 using namespace std;
@@ -214,5 +212,5 @@ FIXTURE(restoring_deleted_session_returns_new) {
 }
 
 int main(int argc, char *argv[]) {
-  return dj::lick::main(argc, argv);
+  return test_main(argc, argv);
 }

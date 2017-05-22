@@ -1,8 +1,8 @@
-#include <lick/lick.h>
+#include <hoc-test/test-helper.h>
+
 #include <string>
 #include <sstream>
 #include <hoc/parsers/multipart.h>
-
 
 const char *test_str = R"(
 ------WebKitFormBoundaryLRCVqhSMNAiGzh3L
@@ -118,5 +118,5 @@ FIXTURE(binary_parser_works) {
 }
 
 int main(int argc, char *argv[]) {
-  return dj::lick::main(argc, argv);
+  return test_main(argc, argv);
 }

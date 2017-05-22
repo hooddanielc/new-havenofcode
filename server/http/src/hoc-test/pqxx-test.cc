@@ -1,13 +1,15 @@
-#include <lick/lick.h>
+#include <hoc-test/test-helper.h>
+
 #include <pqxx/pqxx>
 #include <sstream>
 
+using namespace hoc;
 using namespace std;
 
 FIXTURE(env_vars) {
-  EXPECT_EQ(string(getenv("HOC_DB_NAME")), "hoc_dev");
+  EXPECT_EQ(string(getenv("HOC_DB_NAME")), "hoc_test");
   EXPECT_EQ(string(getenv("HOC_DB_HOST")), "hoc-db");
-  EXPECT_EQ(string(getenv("HOC_DB_USER")), "admin_dev");
+  EXPECT_EQ(string(getenv("HOC_DB_USER")), "admin_test");
   EXPECT_EQ(string(getenv("HOC_DB_PASSWORD")), "123123");
 }
 
@@ -53,5 +55,5 @@ FIXTURE(escape_quote_and_string) {
 }
 
 int main(int argc, char *argv[]) {
-  return dj::lick::main(argc, argv);
+  return test_main(argc, argv);
 }

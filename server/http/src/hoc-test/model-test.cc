@@ -1,4 +1,5 @@
-#include <lick/lick.h>
+#include <hoc-test/test-helper.h>
+
 #include <vector>
 #include <functional>
 #include <memory>
@@ -6,6 +7,8 @@
 #include <map>
 #include <unordered_map>
 #include <mutex>
+
+using namespace hoc;
 
 template <typename val_t>
 class valuable_t {
@@ -822,5 +825,5 @@ FIXTURE(pqxx_adapter_t) {
 }
 
 int main(int argc, char *argv[]) {
-  return dj::lick::main(argc, argv);
+  return test_main(argc, argv);
 }

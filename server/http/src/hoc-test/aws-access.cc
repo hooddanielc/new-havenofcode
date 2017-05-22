@@ -1,4 +1,5 @@
-#include <lick/lick.h>
+#include <test-helper.h>
+
 #include <aws/core/Aws.h>
 #include <aws/s3/S3Client.h>
 #include <aws/s3/model/Bucket.h>
@@ -31,6 +32,7 @@ FIXTURE(aws_s3_client_init) {
   Aws::ShutdownAPI(options);
 }
 
+
 int main(int argc, char *argv[]) {
-  return dj::lick::main(argc, argv);
+  return test_main(argc, argv);
 }

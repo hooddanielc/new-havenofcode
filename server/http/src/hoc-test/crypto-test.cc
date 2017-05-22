@@ -1,4 +1,5 @@
-#include <lick/lick.h>
+#include <hoc-test/test-helper.h>
+
 #include <hoc-crypto/crypto.h>
 #include <hoc-crypto/sha-224.h>
 #include <hoc-crypto/sha-256.h>
@@ -146,5 +147,5 @@ FIXTURE(rsa_test) {
 }
 
 int main(int argc, char *argv[]) {
-  return dj::lick::main(argc, argv);
+  return test_main(argc, argv);
 }

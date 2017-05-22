@@ -1,4 +1,5 @@
-#include <lick/lick.h>
+#include <hoc-test/test-helper.h>
+
 #include <string>
 #include <hoc/env.h>
 #include <hoc/util.h>
@@ -37,5 +38,5 @@ FIXTURE(random_file_path) {
 }
 
 int main(int argc, char *argv[]) {
-  return dj::lick::main(argc, argv);
+  return test_main(argc, argv);
 }

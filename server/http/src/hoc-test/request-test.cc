@@ -1,5 +1,6 @@
+#include <hoc-test/test-helper.h>
+
 #include <string>
-#include <lick/lick.h>
 #include <hoc/request.h>
 #include <hoc/util.h>
 
@@ -40,6 +41,5 @@ FIXTURE(post_write_body) {
 }
 
 int main(int argc, char *argv[]) {
-  request_t::init();
-  return dj::lick::main(argc, argv);
+  return test_main(argc, argv);
 }
