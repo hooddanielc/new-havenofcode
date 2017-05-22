@@ -194,9 +194,9 @@ map<string, vector<string>> req_t::cookies() {
       split(pair, '=', parts);
 
       if (parts.size() == 2) {
-        result[parts[0]].push_back(parts[1]);
+        result[trim(parts[0])].push_back(trim(parts[1]));
       } else if (parts.size() == 1) {
-        result[parts[0]].push_back("");
+        result[trim(parts[0])].push_back("");
       }
     }
   }

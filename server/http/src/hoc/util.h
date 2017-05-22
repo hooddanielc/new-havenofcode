@@ -21,7 +21,17 @@
 
 namespace hoc {
   std::string url_encode(const std::string &str);
+
   std::string url_decode(const std::string &str);
+
+  // trim from start
+  std::string &ltrim(std::string &s);
+
+  // trim from end
+  std::string &rtrim(std::string &s);
+
+  // trim from both ends
+  std::string &trim(std::string &s);
 
   template<typename out_t>
   void split(const std::string &s, char delim, out_t &result) {
