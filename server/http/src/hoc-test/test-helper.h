@@ -2,33 +2,6 @@
 
 #include <stdlib.h>
 #include <hoc/env.h>
-
-// hack to force environment variables
-// to be set before main is called
-namespace hoc {
-
-class set_env_t {
-public:
-  static bool set();
-};
-
-bool set_env_t::set() {
-  setenv("HOC_DB_NAME", "hoc_test", true);
-  setenv("HOC_DB_USER", "admin_test", true);
-  setenv("HOC_DB_PASSWORD", "123123", true);
-  setenv("HOC_GOOGLE_API_CLIENT_ID", "XXXXXXXX", true);
-  setenv("HOC_GOOGLE_API_CLIENT_SECRET", "XXXXXXXX", true);
-  setenv("HOC_AWS_KEY", "XXXXXXXX", true);
-  setenv("HOC_AWS_SECRET", "XXXXXXXX", true);
-  setenv("HOC_MOCK_S3_UPLOADS", "1", true);
-  env_t::get();
-  return true;
-}
-
-bool is_env_set = set_env_t::set();
-
-} // hoc
-
 #include <lick/lick.h>
 #include <hoc/db/connection.h>
 #include <hoc/actions/account.h>
@@ -51,6 +24,14 @@ inline void delete_all_user_data() {
 }
 
 inline int test_main(int argc, char *argv[]) {
+  setenv("HOC_DB_NAME", "hoc_test", true);
+  setenv("HOC_DB_USER", "admin_test", true);
+  setenv("HOC_DB_PASSWORD", "123123", true);
+  setenv("HOC_GOOGLE_API_CLIENT_ID", "XXXXXXXX", true);
+  setenv("HOC_GOOGLE_API_CLIENT_SECRET", "XXXXXXXX", true);
+  setenv("HOC_AWS_KEY", "XXXXXXXX", true);
+  setenv("HOC_AWS_SECRET", "XXXXXXXX", true);
+  setenv("HOC_MOCK_S3_UPLOADS", "1", true);
   return dj::lick::main(argc, argv);
 }
 

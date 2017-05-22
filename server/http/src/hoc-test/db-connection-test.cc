@@ -18,7 +18,7 @@ FIXTURE(admin_connection) {
   auto c = db::super_user_connection();
   pqxx::work w(*c);
   pqxx::result r = w.exec("select current_user");
-  EXPECT_EQ(r[0][0].as<string>(), "admin_dev");
+  EXPECT_EQ(r[0][0].as<string>(), "admin_test");
 }
 
 FIXTURE(member_connection_fails) {

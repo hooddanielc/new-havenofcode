@@ -11,20 +11,26 @@
 namespace hoc {
 namespace db {
 
-static const std::string anonymous_con_str = 
-  std::string("host=") + env_t::get().db_host +
-  " dbname=" + env_t::get().db_name +
-  " user=" + env_t::get().anonymous_user +
-  " password=" + env_t::get().anonymous_pass;
+inline static const std::string get_anonymous_con_str() {
+  static const std::string anonymous_con_str = 
+    std::string("host=") + env_t::get().db_host +
+    " dbname=" + env_t::get().db_name +
+    " user=" + env_t::get().anonymous_user +
+    " password=" + env_t::get().anonymous_pass;
+  return anonymous_con_str;
+}
 
-static const std::string admin_con_str = 
-  std::string("host=") + env_t::get().db_host +
-  " dbname=" + env_t::get().db_name +
-  " user=" + env_t::get().db_user +
-  " password=" + env_t::get().db_pass;
+inline static const std::string get_admin_con_str() {
+  static const std::string admin_con_str = 
+    std::string("host=") + env_t::get().db_host +
+    " dbname=" + env_t::get().db_name +
+    " user=" + env_t::get().db_user +
+    " password=" + env_t::get().db_pass;
+  return admin_con_str;
+}
 
 inline std::shared_ptr<pqxx::connection> anonymous_connection() {
-  return std::shared_ptr<pqxx::connection>(new pqxx::connection(anonymous_con_str));
+  return std::shared_ptr<pqxx::connection>(new pqxx::connection(get_anonymous_con_str()));
 }
 
 inline std::shared_ptr<pqxx::connection> member_connection(
@@ -80,7 +86,7 @@ inline std::shared_ptr<pqxx::connection> member_connection(
 }
 
 inline std::shared_ptr<pqxx::connection> super_user_connection() {
-  return std::shared_ptr<pqxx::connection>(new pqxx::connection(admin_con_str));
+  return std::shared_ptr<pqxx::connection>(new pqxx::connection(get_admin_con_str()));
 }
 
 inline std::shared_ptr<pqxx::connection> session_connection(const std::string &session_id) {
