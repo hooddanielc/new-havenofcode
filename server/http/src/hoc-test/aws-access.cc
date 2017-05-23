@@ -16,8 +16,8 @@ FIXTURE(aws_initializes) {
 }
 
 FIXTURE(aws_env_vars) {
-  EXPECT_EQ(string(env_t::get().aws_key).size(), size_t(20));
-  EXPECT_EQ(string(env_t::get().aws_secret).size(), size_t(40));
+  EXPECT_EQ(env_t::get().aws_key.get().size(), size_t(20));
+  EXPECT_EQ(env_t::get().aws_secret.get().size(), size_t(40));
 }
 
 FIXTURE(aws_s3_client_init) {

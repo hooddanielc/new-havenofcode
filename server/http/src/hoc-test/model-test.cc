@@ -718,19 +718,20 @@ public:
   }
 
   /*
-   * Joins
+   * joins
    * ============================== */
-  template <typename target_obj_t>
-  pqxx_adapter_t &joins(
-    foreign_key_t<obj_t, val_t> (target_obj_t::*)
-  ) {
-    auto primary_col_name = target_obj_t::table.get_primary_col_name();
-    join_toks[target_obj_t::table.name] = primary_col_name;
+  template <typename arg_t, typename... more_t>
+  pqxx_adapter_t &joins(arg_t arg, more_t... more) {
+    magic_join(arg);
+    return joins(more...);
+  }
+
+  pqxx_adapter_t &joins() {
     return *this;
   }
 
   /*
-   * Print debug output
+   * print debug output
    * ======================= */
   template <typename list_type_t>
   void print_list(const std::string name, std::vector<list_type_t> &list, std::ostream &strm) {
@@ -782,12 +783,22 @@ private:
   std::unordered_map<std::string, std::string> order_toks;
   std::unordered_map<std::string, std::string> join_toks;
 
+  template <typename target_obj_t>
+  pqxx_adapter_t &magic_join(
+    foreign_key_t<obj_t, val_t> (target_obj_t::*)
+  ) {
+    auto primary_col_name = target_obj_t::table.get_primary_col_name();
+    join_toks[target_obj_t::table.name] = primary_col_name;
+    return *this;
+  }
+
   template <typename col_val_t>
   std::string str(const col_val_t &val) {
     std::stringstream ss;
     ss << val;
     return ss.str();
   }
+
 };  // pqxx_adapter_t<model_t>
 
 template <typename obj_t, typename val_t>
@@ -852,6 +863,29 @@ const table_t<model_b_t> model_b_t::table = {
   }
 };  // model_b_t
 
+class model_c_t {
+public:
+  const primary_key_t<std::string> &get_primary_key() const {
+    return id;
+  }
+
+  primary_key_t<std::string> id;
+
+  foreign_key_t<model_a_t, std::string> foreign;
+
+  std::string name;
+
+  static const table_t<model_c_t> table;
+};
+
+const table_t<model_c_t> model_c_t::table = {
+  "model_c_t", {
+    make_col("id", &model_c_t::id),
+    make_col("foreign", &model_c_t::foreign, &model_a_t::id),
+    make_col("name", &model_c_t::name)
+  }
+};  // model_c_t
+
 FIXTURE(adapter) {
   auto subject = make_adapter(&model_a_t::id);
   subject.find_by(&model_a_t::age, 321);
@@ -867,7 +901,7 @@ FIXTURE(adapter) {
   subject.order(&model_a_t::id, "asc");
   subject.order(&model_a_t::age, "asc");
   subject.order(&model_a_t::opacity, "desc");
-  subject.joins(&model_b_t::foreign);
+  subject.joins(&model_b_t::foreign, &model_c_t::foreign);
   subject.write(std::cout);
 
   auto related_subject = make_adapter(&model_b_t::id);

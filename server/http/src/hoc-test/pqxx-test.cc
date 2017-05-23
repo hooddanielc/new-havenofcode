@@ -2,26 +2,36 @@
 
 #include <pqxx/pqxx>
 #include <sstream>
+#include <hoc/env.h>
 
 using namespace hoc;
 using namespace std;
 
 FIXTURE(env_vars) {
-  EXPECT_EQ(string(getenv("HOC_DB_NAME")), "hoc_test");
-  EXPECT_EQ(string(getenv("HOC_DB_HOST")), "hoc-db");
-  EXPECT_EQ(string(getenv("HOC_DB_USER")), "admin_test");
-  EXPECT_EQ(string(getenv("HOC_DB_PASSWORD")), "123123");
+  EXPECT_EQ(env_t::get().db_name.get(), "hoc_test");
+  EXPECT_EQ(env_t::get().db_host.get(), "hoc-db");
+  EXPECT_EQ(env_t::get().db_user.get(), "admin_test");
+  EXPECT_EQ(env_t::get().db_pass.get(), "123123");
 }
 
 std::string con_str() {
-  return "host=hoc-db dbname=hoc_dev user=admin_dev password=123123 connect_timeout=10";
+  stringstream ss;
+  ss << "host=" << env_t::get().db_host.get() << " " <<
+    "dbname=" << env_t::get().db_name.get() << " " <<
+    "user=" << env_t::get().db_user.get() << " " <<
+    "password=" << env_t::get().db_pass.get() << " " <<
+    "connect_timeout=10";
+
+  return ss.str();
 }
 
 FIXTURE(basic_query_int) {
-  pqxx::connection c(con_str());
-  pqxx::work w(c);
-  pqxx::result r = w.exec("SELECT 1");
-  EXPECT_EQ(r[0][0].as<int>(), 1);
+  EXPECT_OK([]() {
+    pqxx::connection c(con_str());
+    pqxx::work w(c);
+    pqxx::result r = w.exec("SELECT 1");
+    EXPECT_EQ(r[0][0].as<int>(), 1);
+  });
 }
 
 FIXTURE(basic_query_double) {

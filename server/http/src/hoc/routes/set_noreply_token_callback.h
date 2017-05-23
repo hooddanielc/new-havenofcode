@@ -1,8 +1,8 @@
 #pragma once
 
 #include <stdexcept>
-#include <hoc/app.h>
 #include <hoc/route.h>
+#include <hoc/env.h>
 #include <hoc/json.h>
 #include <hoc/request.h>
 #include <hoc/db/connection.h>
@@ -36,10 +36,10 @@ public:
       std::string get_token_args("code=");
 
       get_token_args.append(authorization_code)
-        .append("&client_id=").append(app_t::get().google_api_client_id)
-        .append("&client_secret=").append(app_t::get().google_api_client_secret)
+        .append("&client_id=").append(env_t::get().google_api_client_id.get())
+        .append("&client_secret=").append(env_t::get().google_api_client_secret.get())
         .append("&redirect_uri=http://")
-        .append(url_encode(app_t::get().host)).append("/api/set-noreply-callback")
+        .append(url_encode(env_t::get().host.get())).append("/api/set-noreply-callback")
         .append("&grant_type=authorization_code");
 
       request_t get_token_request;
@@ -75,7 +75,7 @@ public:
           !profile_json.contains("emails") ||
           profile_json["emails"].get_size() == 0 ||
           !profile_json["emails"][0].contains("value") ||
-          profile_json["emails"][0]["value"].as<std::string>() != app_t::get().no_reply_email
+          profile_json["emails"][0]["value"].as<std::string>() != env_t::get().no_reply_email.get()
         ) {
           req.set_status(420);
           std::string body("seriously?");

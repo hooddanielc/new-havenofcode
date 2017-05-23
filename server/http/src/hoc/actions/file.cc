@@ -10,7 +10,7 @@ string create_aws_multipart_upload(
   const string &aws_bucket,
   const string &aws_key
 ) {
-  if (env_t::get().mock_s3_uploads) {
+  if (env_t::get().mock_s3_uploads.get() == "1") {
     return "not-uploaded-to-s3";
   }
 
@@ -18,8 +18,8 @@ string create_aws_multipart_upload(
   config.region = aws_region.c_str();
 
   Aws::S3::S3Client client(Aws::Auth::AWSCredentials(
-    env_t::get().aws_key,
-    env_t::get().aws_secret
+    env_t::get().aws_key.get().c_str(),
+    env_t::get().aws_secret.get().c_str()
   ), config);
 
   Aws::S3::Model::CreateMultipartUploadRequest request;
@@ -40,7 +40,7 @@ void cancel_aws_multipart_upload(
   const string &aws_key,
   const string &upload_id
 ) {
-  if (env_t::get().mock_s3_uploads) {
+  if (env_t::get().mock_s3_uploads.get() == "1") {
     return;
   }
 
@@ -48,8 +48,8 @@ void cancel_aws_multipart_upload(
   config.region = aws_region.c_str();
 
   Aws::S3::S3Client client(Aws::Auth::AWSCredentials(
-    env_t::get().aws_key,
-    env_t::get().aws_secret
+    env_t::get().aws_key.get().c_str(),
+    env_t::get().aws_secret.get().c_str()
   ), config);
 
   Aws::S3::Model::AbortMultipartUploadRequest request;
@@ -69,7 +69,7 @@ std::string mock_complete_aws_file_part_promise(
   const std::string &file_path
 ) {
   std::string user_dir(aws_key.begin() + 1, aws_key.begin() + 37);
-  std::string tmp_path(env_t::get().upload_tmp_path);
+  std::string tmp_path(env_t::get().upload_tmp_path.get());
   std::string new_dir(tmp_path + "/fake-s3/" + user_dir);
   mkdir((tmp_path + "/fake-s3").c_str(), 0644);
   mkdir(new_dir.c_str(), 0644);
@@ -88,7 +88,7 @@ string complete_aws_file_part_promise(
   const int part_number,
   const std::string &file_path
 ) {
-  if (env_t::get().mock_s3_uploads) {
+  if (env_t::get().mock_s3_uploads.get() == "1") {
     return mock_complete_aws_file_part_promise(
       aws_key,
       part_number,
@@ -99,8 +99,8 @@ string complete_aws_file_part_promise(
   Aws::Client::ClientConfiguration config;
   config.region = aws_region.c_str();
   Aws::S3::S3Client client(Aws::Auth::AWSCredentials(
-    env_t::get().aws_key,
-    env_t::get().aws_secret
+    env_t::get().aws_key.get().c_str(),
+    env_t::get().aws_secret.get().c_str()
   ), config);
 
   // empty upload id means the file
@@ -149,7 +149,7 @@ void mock_complete_aws_multipart_upload(
   const string &aws_key,
   const vector<string> &keys
 ) {
-  std::string tmp_path(env_t::get().upload_tmp_path);
+  std::string tmp_path(env_t::get().upload_tmp_path.get());
   std::string dst_path = tmp_path + "/fake-s3" + aws_key;
   std::ofstream dst(dst_path, std::ios::binary);
   for (auto it = keys.begin(); it != keys.end(); ++it) {
@@ -166,7 +166,7 @@ void complete_aws_multipart_upload(
   const string &upload_id,
   const vector<string> &keys
 ) {
-  if (env_t::get().mock_s3_uploads) {
+  if (env_t::get().mock_s3_uploads.get() == "1") {
     return mock_complete_aws_multipart_upload(
       aws_key,
       keys
@@ -177,8 +177,8 @@ void complete_aws_multipart_upload(
   config.region = aws_region.c_str();
 
   Aws::S3::S3Client client(Aws::Auth::AWSCredentials(
-    env_t::get().aws_key,
-    env_t::get().aws_secret
+    env_t::get().aws_key.get().c_str(),
+    env_t::get().aws_secret.get().c_str()
   ), config);
 
   Aws::S3::Model::CompletedMultipartUpload complete_upload;

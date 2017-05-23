@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <stdexcept>
+#include <cstdlib>
 #include <pqxx/pqxx>
 #include <aws/core/Aws.h>
 #include <aws/core/client/ClientConfiguration.h>
@@ -20,53 +21,55 @@
 #include <hoc/env.h>
 
 namespace hoc {
-  std::string url_encode(const std::string &str);
 
-  std::string url_decode(const std::string &str);
+std::string url_encode(const std::string &str);
 
-  // trim from start
-  std::string &ltrim(std::string &s);
+std::string url_decode(const std::string &str);
 
-  // trim from end
-  std::string &rtrim(std::string &s);
+// trim from start
+std::string &ltrim(std::string &s);
 
-  // trim from both ends
-  std::string &trim(std::string &s);
+// trim from end
+std::string &rtrim(std::string &s);
 
-  template<typename out_t>
-  void split(const std::string &s, char delim, out_t &result) {
-    std::stringstream ss;
-    ss.str(s);
-    std::string item;
-    while (std::getline(ss, item, delim)) {
-      result.push_back(item);
-    }
+// trim from both ends
+std::string &trim(std::string &s);
+
+template<typename out_t>
+void split(const std::string &s, char delim, out_t &result) {
+  std::stringstream ss;
+  ss.str(s);
+  std::string item;
+  while (std::getline(ss, item, delim)) {
+    result.push_back(item);
   }
-
-  void open_ifstream(std::ifstream &strm, const std::string &path);
-  std::string random_characters(size_t size);
-  std::string camelify(std::string &str);
-  dj::json_t::array_t to_json(const pqxx::result &result);
-
-  template <typename as_t>
-  dj::json_t::array_t to_json_array(const pqxx::result &rows, int i) {
-    dj::json_t::array_t result;
-    for (auto it = rows.begin(); it != rows.end(); ++it) {
-      result.emplace_back(it[i].as<as_t>());
-    }
-    return result;
-  }
-
-  template <typename as_t>
-  dj::json_t::array_t to_json_array(const pqxx::result &rows, const char *name) {
-    dj::json_t::array_t result;
-    auto num = rows.column_number(name);
-    for (auto it = rows.begin(); it != rows.end(); ++it) {
-      result.emplace_back(it[num].as<as_t>());
-    }
-    return result;
-  }
-
-  std::string random_tmp_path();
-  std::string get_s3_url(const dj::json_t &file);
 }
+
+void open_ifstream(std::ifstream &strm, const std::string &path);
+std::string random_characters(size_t size);
+std::string camelify(std::string &str);
+dj::json_t::array_t to_json(const pqxx::result &result);
+
+template <typename as_t>
+dj::json_t::array_t to_json_array(const pqxx::result &rows, int i) {
+  dj::json_t::array_t result;
+  for (auto it = rows.begin(); it != rows.end(); ++it) {
+    result.emplace_back(it[i].as<as_t>());
+  }
+  return result;
+}
+
+template <typename as_t>
+dj::json_t::array_t to_json_array(const pqxx::result &rows, const char *name) {
+  dj::json_t::array_t result;
+  auto num = rows.column_number(name);
+  for (auto it = rows.begin(); it != rows.end(); ++it) {
+    result.emplace_back(it[num].as<as_t>());
+  }
+  return result;
+}
+
+std::string random_tmp_path();
+std::string get_s3_url(const dj::json_t &file);
+
+}   // hoc

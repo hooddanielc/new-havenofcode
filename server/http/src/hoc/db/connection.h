@@ -13,19 +13,19 @@ namespace db {
 
 inline static const std::string get_anonymous_con_str() {
   static const std::string anonymous_con_str = 
-    std::string("host=") + env_t::get().db_host +
-    " dbname=" + env_t::get().db_name +
-    " user=" + env_t::get().anonymous_user +
-    " password=" + env_t::get().anonymous_pass;
+    std::string("host=") + env_t::get().db_host.get() +
+    " dbname=" + env_t::get().db_name.get() +
+    " user=" + env_t::get().anonymous_user.get() +
+    " password=" + env_t::get().anonymous_pass.get();
   return anonymous_con_str;
 }
 
 inline static const std::string get_admin_con_str() {
   static const std::string admin_con_str = 
-    std::string("host=") + env_t::get().db_host +
-    " dbname=" + env_t::get().db_name +
-    " user=" + env_t::get().db_user +
-    " password=" + env_t::get().db_pass;
+    std::string("host=") + env_t::get().db_host.get() +
+    " dbname=" + env_t::get().db_name.get() +
+    " user=" + env_t::get().db_user.get() +
+    " password=" + env_t::get().db_pass.get();
   return admin_con_str;
 }
 
@@ -55,8 +55,8 @@ inline std::shared_ptr<pqxx::connection> member_connection(
   auto r_for_hash = w.exec(ss);
 
   const std::string con_str = 
-    std::string("host=") + env_t::get().db_host +
-    " dbname=" + env_t::get().db_name +
+    std::string("host=") + env_t::get().db_host.get() +
+    " dbname=" + env_t::get().db_name.get() +
     " user=" + email +
     " password=" + r_for_hash[0][0].as<std::string>();
 

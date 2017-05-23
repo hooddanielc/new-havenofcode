@@ -1,8 +1,7 @@
 #pragma once
 
-#include <hoc/app.h>
+#include <hoc/env.h>
 #include <hoc/route.h>
-#include <hoc/app.h>
 
 namespace hoc {
 
@@ -16,10 +15,10 @@ public:
       std::string redirect_uri("https://accounts.google.com/o/oauth2/v2/auth?");
 
       redirect_uri
-        .append("redirect_uri=http%3A%2F%2F").append(url_encode(app_t::get().host)).append("%2Fapi%2Fset-noreply-callback&")
+        .append("redirect_uri=http%3A%2F%2F").append(url_encode(env_t::get().host.get())).append("%2Fapi%2Fset-noreply-callback&")
         .append("prompt=consent&")
         .append("response_type=code&")
-        .append("client_id=").append(app_t::get().google_api_client_id).append("&")
+        .append("client_id=").append(env_t::get().google_api_client_id.get()).append("&")
         .append("scope=https%3A%2F%2Fmail.google.com%2F+")
         .append("https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fgmail.send+")
         .append("https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fplus.profile.emails.read+")

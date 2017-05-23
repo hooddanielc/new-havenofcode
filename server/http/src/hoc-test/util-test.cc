@@ -22,7 +22,7 @@ FIXTURE(random_characters) {
 }
 
 FIXTURE(random_file_path) {
-  std::string tmp_env(env_t::get().upload_tmp_path);
+  std::string tmp_env(env_t::get().upload_tmp_path.get());
 
   for (int i = 0; i < 100; ++i) {
     auto path1 = random_tmp_path();

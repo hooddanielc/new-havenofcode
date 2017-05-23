@@ -105,7 +105,7 @@ namespace mail {
       "Hi ").append(username).append(",\n\n"
       "Please click on the link below "
       "to verify your email and start living the dream.\n\n"
-      "http://").append(env_t::get().host).append("/confirm-email/"
+      "http://").append(env_t::get().host.get()).append("/confirm-email/"
     );
 
     msg_str.append(hash).append("/").append(url_encode(email)).append(
@@ -115,7 +115,7 @@ namespace mail {
     );
 
     auto msg = mail::get_message(
-      env_t::get().no_reply_email,
+      env_t::get().no_reply_email.get(),
       vector<string>({ email }),
       vector<string>(),
       "Welcome Aboard",
@@ -132,8 +132,8 @@ namespace mail {
     std::string get_token_url("https://www.googleapis.com/oauth2/v4/token");
     std::string get_token_args("client_id=");
 
-    get_token_args.append(env_t::get().google_api_client_id)
-      .append("&client_secret=").append(env_t::get().google_api_client_secret)
+    get_token_args.append(env_t::get().google_api_client_id.get())
+      .append("&client_secret=").append(env_t::get().google_api_client_secret.get())
       .append("&refresh_token=").append(db_res[0][0].as<std::string>())
       .append("&grant_type=refresh_token");
 
@@ -155,7 +155,7 @@ namespace mail {
     }
 
     auto transport = mail::get_transporter(
-      env_t::get().no_reply_email,
+      env_t::get().no_reply_email.get(),
       json["access_token"].as<string>()
     );
 

@@ -24,14 +24,16 @@ inline void delete_all_user_data() {
 }
 
 inline int test_main(int argc, char *argv[]) {
-  setenv("HOC_DB_NAME", "hoc_test", true);
-  setenv("HOC_DB_USER", "admin_test", true);
-  setenv("HOC_DB_PASSWORD", "123123", true);
-  setenv("HOC_GOOGLE_API_CLIENT_ID", "XXXXXXXX", true);
-  setenv("HOC_GOOGLE_API_CLIENT_SECRET", "XXXXXXXX", true);
-  setenv("HOC_AWS_KEY", "XXXXXXXX", true);
-  setenv("HOC_AWS_SECRET", "XXXXXXXX", true);
-  setenv("HOC_MOCK_S3_UPLOADS", "1", true);
+  env_t::get().db_name.set("hoc_test");
+  env_t::get().db_user.set("admin_test");
+  env_t::get().db_pass.set("123123");
+  env_t::get().db_host.set("hoc-db");
+  env_t::get().upload_tmp_path.set("/tmp");
+  env_t::get().google_api_client_id.set("XXXXXXXX");
+  env_t::get().google_api_client_secret.set("XXXXXXXX");
+  env_t::get().aws_key.set("XXXXXXXX");
+  env_t::get().aws_secret.set("XXXXXXXX");
+  env_t::get().mock_s3_uploads.set("1");
   return dj::lick::main(argc, argv);
 }
 

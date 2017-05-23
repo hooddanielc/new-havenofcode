@@ -187,7 +187,7 @@ namespace hoc {
   }
 
   std::string random_tmp_path() {
-    std::string p(env_t::get().upload_tmp_path);
+    std::string p(env_t::get().upload_tmp_path.get().c_str());
     p += '/';
     p.append(random_characters(50));
     return p;
@@ -198,8 +198,8 @@ namespace hoc {
     config.region = file["awsRegion"].as<std::string>().c_str();
 
     Aws::S3::S3Client client(Aws::Auth::AWSCredentials(
-      env_t::get().aws_key,
-      env_t::get().aws_secret
+      env_t::get().aws_key.get().c_str(),
+      env_t::get().aws_secret.get().c_str()
     ), config);
 
     const char *key = file["awsKey"].as<std::string>().substr(1).c_str();

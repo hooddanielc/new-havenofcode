@@ -39,7 +39,7 @@ static void ngx_http_sample_put_handler(ngx_http_request_t *r) {
       // read file and emit on_data event
       size_t ret;
       size_t offset = 0;
-      size_t size = env_t::get().upload_buffer_size;
+      size_t size = static_cast<size_t>(std::stoi(env_t::get().upload_buffer_size.get()));
       unsigned char buff[size];
 
       while((ret = ngx_read_file(&r->request_body->temp_file->file, buff, size, offset)) > 0) {
