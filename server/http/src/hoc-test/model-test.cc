@@ -8,6 +8,8 @@
 #include <unordered_map>
 #include <mutex>
 
+#include <hoc/db/connection.h>
+
 using namespace hoc;
 
 template <typename val_t>
@@ -505,6 +507,13 @@ std::shared_ptr<foreign_col_t<obj_t, val_t, target_obj_t>> make_col(
   return std::make_shared<foreign_col_t<obj_t, val_t, target_obj_t>>(name, p2m, p2m_target);
 }
 
+// require primary key for foreign key columns
+template <typename obj_t, typename val_t, typename target_obj_t>
+std::shared_ptr<foreign_col_t<obj_t, val_t, target_obj_t>> make_col(
+  const std::string &name,
+  foreign_key_t<target_obj_t, val_t> (obj_t::*p2m)
+) = delete;
+
 template <typename obj_t>
 class table_t final {
 public:
@@ -595,9 +604,9 @@ public:
    * Look up the name of a foreign_col_t using a member
    * to pointer reference.
    */
-  template <typename val_t, typename target_obj_t>
-  std::string get_col_name(foreign_key_t<target_obj_t, val_t> (obj_t::*p2m)) const {
-    using for_t = const foreign_col_t<obj_t, val_t, target_obj_t>*;
+  template <typename target_val_t, typename target_obj_t>
+  std::string get_col_name(foreign_key_t<target_obj_t, target_val_t> (obj_t::*p2m)) const {
+    using for_t = const foreign_col_t<obj_t, target_val_t, target_obj_t>*;
     for (const auto &col: cols) {
       if (for_t advanced_col = dynamic_cast<for_t>(&*col)) {
         if (advanced_col->p2m == p2m) {
@@ -628,7 +637,7 @@ public:
   pqxx_adapter_t(primary_key_t<val_t> (obj_t::*p2m_)) : p2m(p2m_) {}
 
   /*
-   * find_by(key, value)
+   * find(value)
    * ============================================= */
   pqxx_adapter_t &find(const val_t &val) {
     find_toks.push_back(str(val));
@@ -643,32 +652,92 @@ public:
     return *this;
   }
 
+  // find_by on current obj
   template <typename col_val_t>
   pqxx_adapter_t &find_by(
     col_val_t (obj_t::*p2m),
     const decltype(col_val_t()) &val
   ) {
     auto name = obj_t::table.get_col_name(p2m);
-    find_by_toks[name] = str(val);
+    std::stringstream ss_name;
+    ss_name << obj_t::table.name << "." << name;
+    std::stringstream ss_val;
+    ss_val << val;
+    find_by_toks[ss_name.str()] = ss_val.str();
     return *this;
   }
 
+  // find_by on current primary obj
   pqxx_adapter_t &find_by(
     primary_key_t<val_t> (obj_t::*p2m),
     const val_t &val
   ) {
     auto name = obj_t::table.get_col_name(p2m);
-    find_by_toks[name] = str(val);
+    std::stringstream ss_name;
+    ss_name << obj_t::table.name << "." << name;
+    std::stringstream ss_val;
+    ss_val << val;
+    find_by_toks[ss_name.str()] = ss_val.str();
     return *this;
   }
 
-  template <typename target_t, typename col_val_t>
+  // find_by on current foreign obj
+  template <typename target_obj_t, typename col_val_t>
   pqxx_adapter_t &find_by(
-    foreign_key_t<target_t, col_val_t> (obj_t::*p2m),
+    foreign_key_t<target_obj_t, col_val_t> (obj_t::*p2m),
     const decltype(col_val_t()) &val
   ) {
     auto name = obj_t::table.get_col_name(p2m);
-    find_by_toks[name] = str(val);
+    std::stringstream ss_name;
+    ss_name << obj_t::table.name << "." << name;
+    std::stringstream ss_val;
+    ss_val << val;
+    find_by_toks[ss_name.str()] = ss_val.str();
+    return *this;
+  }
+
+  // find_by on other obj
+  template <typename other_obj_t, typename other_val_t>
+  pqxx_adapter_t &find_by(
+    other_val_t (other_obj_t::*p2m),
+    const decltype(other_val_t()) &val
+  ) {
+    auto name = other_obj_t::table.get_col_name(p2m);
+    std::stringstream ss_name;
+    ss_name << other_obj_t::table.name << "." << name;
+    std::stringstream ss_val;
+    ss_val << val;
+    find_by_toks[ss_name.str()] = ss_val.str();
+    return *this;
+  }
+
+  // find_by on other primary obj
+  template <typename other_obj_t, typename other_val_t>
+  pqxx_adapter_t &find_by(
+    primary_key_t<other_val_t> (other_obj_t::*p2m),
+    const decltype(other_val_t()) &val
+  ) {
+    auto name = other_obj_t::table.get_col_name(p2m);
+    std::stringstream ss_name;
+    ss_name << other_obj_t::table.name << "." << name;
+    std::stringstream ss_val;
+    ss_val << val;
+    find_by_toks[ss_name.str()] = ss_val.str();
+    return *this;
+  }
+
+  // find_by on other foreign obj
+  template <typename other_obj_t, typename target_t, typename col_val_t>
+  pqxx_adapter_t &find_by(
+    foreign_key_t<target_t, col_val_t> (other_obj_t::*p2m),
+    const decltype(col_val_t()) &val
+  ) {
+    auto name = other_obj_t::table.get_col_name(p2m);
+    std::stringstream ss_name;
+    ss_name << other_obj_t::table.name << "." << name;
+    std::stringstream ss_val;
+    ss_val << val;
+    find_by_toks[ss_name.str()] = ss_val.str();
     return *this;
   }
 
@@ -776,6 +845,49 @@ public:
   // todo reverse_order
   // todo select
 
+  /*
+   * to_sql();
+   * ======================= */
+  std::string to_sql(
+    std::shared_ptr<pqxx::connection> c = hoc::db::anonymous_connection()
+  ) {
+    std::stringstream ss;
+    ss << "select * from " << obj_t::table.name << " ";
+
+    bool needs_where = find_toks.size() ||
+      find_by_toks.size() ||
+      where_toks.size() ||
+      join_toks.size();
+
+    if (needs_where) {
+      ss << "where";
+
+      if (find_toks.size()) {
+        ss << " ";
+        for (auto it = find_toks.begin(); it != find_toks.end(); ++it) {
+          ss << obj_t::table.name << "." << obj_t::table.get_primary_col_name() << " = ";
+          ss << c->quote(*it);
+          if (std::next(it) != find_toks.end()) {
+            ss << " or ";
+          }
+        }
+      }
+
+      if (find_by_toks.size()) {
+        ss << " ";
+        for (auto it = find_by_toks.begin(); it != find_by_toks.end(); ++it) {
+          ss << c->esc(it->first) << " = " << c->quote(it->second);
+          if (std::next(it) != find_by_toks.end()) {
+            ss << " and ";
+          }
+        }
+      }
+
+    }
+
+    return ss.str();
+  }
+
 private:
   std::vector<val_t> find_toks;
   std::vector<std::string> where_toks;
@@ -813,6 +925,27 @@ pqxx_adapter_t<obj_t, val_t> make_adapter(
 // * time to test ^.^
 // * ==================================
 
+class model_z_t {
+public:
+  const primary_key_t<int> &get_primary_key() const {
+    return id;
+  }
+
+  primary_key_t<int> id;
+
+  int age;
+
+  static const table_t<model_z_t> table;
+
+};
+
+const table_t<model_z_t> model_z_t::table = {
+  "model_z_t", {
+    make_col("id", &model_z_t::id),
+    make_col("age", &model_z_t::age)
+  }
+};  // model_z_t
+
 class model_a_t {
 public:
   const primary_key_t<std::string> &get_primary_key() const {
@@ -827,6 +960,8 @@ public:
 
   int64_t huge_num;
 
+  foreign_key_t<model_z_t, int> foreign;
+
   static const table_t<model_a_t> table;
 
 };
@@ -836,7 +971,8 @@ const table_t<model_a_t> model_a_t::table = {
     make_col("id", &model_a_t::id),
     make_col("opacity", &model_a_t::opacity),
     make_col("huge_num", &model_a_t::huge_num),
-    make_col("age", &model_a_t::age)
+    make_col("age", &model_a_t::age),
+    make_col("foreign", &model_a_t::foreign, &model_z_t::id)
   }
 };  // model_a_t
 
@@ -886,6 +1022,24 @@ const table_t<model_c_t> model_c_t::table = {
   }
 };  // model_c_t
 
+FIXTURE(adapter_to_sql) {
+  // find
+  auto subject_find_one = make_adapter(&model_a_t::id).find("one");
+  EXPECT_EQ(
+    subject_find_one.to_sql(),
+    "select * from model_a_t where model_a_t.id = 'one'"
+  );
+  auto subject_find_two = make_adapter(&model_a_t::id).find("one").find("two");
+  EXPECT_EQ(
+    subject_find_two.to_sql(),
+    "select * from model_a_t where model_a_t.id = 'one' or model_a_t.id = 'two'"
+  );
+
+  // find_by
+  auto subject_find_by = make_adapter(&model_a_t::id).find_by(&model_a_t::age, 1);
+  std::cout << subject_find_by.to_sql() << std::endl;
+}
+
 FIXTURE(adapter) {
   auto subject = make_adapter(&model_a_t::id);
   subject.find_by(&model_a_t::age, 321);
@@ -895,6 +1049,10 @@ FIXTURE(adapter) {
   subject.find_by(&model_a_t::id, "321");
   subject.find_by(&model_a_t::opacity, 0.1);
   subject.find_by(&model_a_t::huge_num, 1000000);
+  subject.find_by(&model_a_t::foreign, 123);
+  subject.find_by(&model_c_t::id, "420");
+  subject.find_by(&model_c_t::name, "alexander");
+  subject.find_by(&model_c_t::foreign, "for_321");
   subject.where("id > 0");
   subject.where("id is not null");
   subject.order("id", "asc");
@@ -915,7 +1073,7 @@ FIXTURE(adapter) {
   related_subject.where("id is not null");
   related_subject.order("id", "asc");
   related_subject.order(&model_b_t::foreign, "desc");
-  related_subject.write(std::cout);
+  // related_subject.write(std::cout);
 }
 
 FIXTURE(valuable_t) {
