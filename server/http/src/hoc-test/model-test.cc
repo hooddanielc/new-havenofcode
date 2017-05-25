@@ -7,6 +7,7 @@
 #include <map>
 #include <unordered_map>
 #include <mutex>
+#include <tuple>
 
 #include <hoc/db/connection.h>
 
@@ -752,37 +753,44 @@ public:
   /*
    * order(key, direction = asc)
    * ============================================= */
-  pqxx_adapter_t &order(const std::string &key, const std::string &direction = "asc") {
+  pqxx_adapter_t &order(const std::string &key, const std::string &direction = "") {
     order_toks[key] = direction;
     return *this;
   }
 
-  template <typename col_val_t>
+  template <typename other_obj_t, typename col_val_t>
   pqxx_adapter_t &order(
-    col_val_t (obj_t::*p2m),
-    const std::string &direction = "asc"
+    col_val_t (other_obj_t::*p2m),
+    const std::string &direction = ""
   ) {
-    auto name = obj_t::table.get_col_name(p2m);
-    order_toks[name] = direction;
+    auto name = other_obj_t::table.get_col_name(p2m);
+    std::stringstream ss_name;
+    ss_name << other_obj_t::table.name << "." << name;
+    order_toks[ss_name.str()] = direction;
     return *this;
   }
 
+  template <typename other_obj_t, typename col_val_t>
   pqxx_adapter_t &order(
-    primary_key_t<val_t> (obj_t::*p2m),
-    const std::string &direction = "asc"
+    primary_key_t<val_t> (other_obj_t::*p2m),
+    const std::string &direction = ""
   ) {
-    auto name = obj_t::table.get_col_name(p2m);
-    order_toks[name] = direction;
+    auto name = other_obj_t::table.get_col_name(p2m);
+    std::stringstream ss_name;
+    ss_name << other_obj_t::table.name << "." << name;
+    order_toks[ss_name.str()] = direction;
     return *this;
   }
 
-  template <typename target_t, typename col_val_t>
+  template <typename other_obj_t, typename target_t, typename col_val_t>
   pqxx_adapter_t &order(
-    foreign_key_t<target_t, col_val_t> (obj_t::*p2m),
-    const std::string &direction = "asc"
+    foreign_key_t<target_t, col_val_t> (other_obj_t::*p2m),
+    const std::string &direction = ""
   ) {
-    auto name = obj_t::table.get_col_name(p2m);
-    order_toks[name] = direction;
+    auto name = other_obj_t::table.get_col_name(p2m);
+    std::stringstream ss_name;
+    ss_name << other_obj_t::table.name << "." << name;
+    order_toks[ss_name.str()] = direction;
     return *this;
   }
 
@@ -791,7 +799,7 @@ public:
    * ============================== */
   template <typename arg_t, typename... more_t>
   pqxx_adapter_t &joins(arg_t arg, more_t... more) {
-    magic_join(arg);
+    add_join(arg);
     return joins(more...);
   }
 
@@ -819,13 +827,24 @@ public:
     strm << std::endl;
   }
 
+  void print_joins(std::ostream &strm) {
+    strm << "  " << std::endl;
+    for (const auto &item : join_toks) {
+      strm << "    " << std::get<0>(item) << std::endl;
+      strm << "      " << std::get<1>(item) << std::endl;
+      strm << "      " << std::get<2>(item) << std::endl;
+      strm << "      " << std::get<3>(item) << std::endl;
+    }
+    strm << std::endl;
+  }
+
   void write(std::ostream &strm) {
     strm << "pqxx_adapter_t<" << obj_t::table.name << ">" << std::endl;
     print_list("find_toks", find_toks, strm);
     print_list("where_toks", where_toks, strm);
     print_map("find_by_toks", find_by_toks, strm);
     print_map("order_toks", order_toks, strm);
-    print_map("join_toks", join_toks, strm);
+    print_joins(strm);
   }
 
   // todo create_with
@@ -893,14 +912,39 @@ private:
   std::vector<std::string> where_toks;
   std::unordered_map<std::string, std::string> find_by_toks;
   std::unordered_map<std::string, std::string> order_toks;
-  std::unordered_map<std::string, std::string> join_toks;
+  std::vector<std::tuple<
+    std::string,  // join type
+    std::string,  // joined table
+    std::string,  // column name
+    std::string   // column name
+  >> join_toks;
 
+  // add join for current table
   template <typename target_obj_t>
-  pqxx_adapter_t &magic_join(
-    foreign_key_t<obj_t, val_t> (target_obj_t::*)
+  pqxx_adapter_t &add_join(
+    foreign_key_t<obj_t, val_t> (target_obj_t::*p2m)
   ) {
-    auto primary_col_name = target_obj_t::table.get_primary_col_name();
-    join_toks[target_obj_t::table.name] = primary_col_name;
+    std::stringstream ss_left;
+    ss_left << obj_t::table.name << "." << obj_t::table.get_primary_col_name();
+    auto target_col_name = target_obj_t::table.get_col_name(p2m);
+    auto target_table_name = target_obj_t::table.name;
+    std::stringstream ss_right;
+    ss_right << target_table_name << "." << target_col_name;
+    auto right_col = target_obj_t::table.get_col_name(p2m);
+    join_toks.push_back(std::make_tuple(
+      "inner join",
+      target_obj_t::table.name,
+      ss_left.str(),
+      ss_right.str()
+    ));
+    return *this;
+  }
+
+  template <typename other_obj_t, typename other_val_t, typename target_obj_t>
+  pqxx_adapter_t add_join(
+    primary_key_t<other_val_t> (other_obj_t::*p2m),
+    foreign_key_t<other_obj_t, other_val_t> (target_obj_t::*)
+  ) {
     return *this;
   }
 
@@ -1059,6 +1103,8 @@ FIXTURE(adapter) {
   subject.order(&model_a_t::id, "asc");
   subject.order(&model_a_t::age, "asc");
   subject.order(&model_a_t::opacity, "desc");
+  subject.order(&model_b_t::id);
+  subject.order(&model_c_t::id);
   subject.joins(&model_b_t::foreign, &model_c_t::foreign);
   subject.write(std::cout);
 
