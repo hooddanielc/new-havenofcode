@@ -1,5 +1,10 @@
 FROM dhoodlum/arch-base-devel
 
+# arch updates a lot
+RUN echo "built " >> /build-date.txt
+RUN date >> /build-date.txt
+RUN pacman --noconfirm -Syyu
+
 RUN echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
 RUN locale-gen
 RUN echo "LANG=en_US.UTF-8" > /etc/locale.conf
@@ -38,5 +43,14 @@ RUN sudo pacman --noconfirm -S cmake
 
 # set path env
 ENV PATH /opt/ib:$PATH
+
+# install c++17 std::variant by mpark
+RUN sudo mkdir /opt/variant && sudo chown developer /opt/variant
+RUN git clone https://github.com/mpark/variant.git /opt/variant
+RUN mkdir /opt/variant/build
+RUN cd /opt/variant/build && cmake ..
+RUN cd /opt/variant/build && \
+  make -j$(grep -c ^processor /proc/cpuinfo) && \
+  sudo make install
 
 CMD /bin/zsh
