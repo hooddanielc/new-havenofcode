@@ -4,8 +4,10 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 docker create -v /home/developer/data --name dbstore dhoodlum/havenofcode-db /bin/true
 docker run -tid --rm --volumes-from dbstore -p 5432:5432 --name hoc-db dhoodlum/havenofcode-db
 
+touch $DIR/.zsh_history
 docker run -ti \
   --link hoc-db \
+  -v $DIR/.zsh_history:/home/developer/.zsh_history \
   -v $DIR/http/src:/home/developer/src \
   -v $DIR/http/out:/home/developer/out \
   -v $DIR/http/config:/home/developer/config \
