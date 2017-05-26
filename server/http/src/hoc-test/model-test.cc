@@ -872,7 +872,13 @@ public:
     std::shared_ptr<pqxx::connection> c = hoc::db::anonymous_connection()
   ) {
     std::stringstream ss;
-    ss << "select * from " << obj_t::table.name << " ";
+    ss << "select " << obj_t::table.name << ".* from " << obj_t::table.name << " ";
+
+    // eval joins
+    for (const auto &join : join_toks) {
+      ss << std::get<0>(join) << " " << std::get<1>(join) << " on "
+         << std::get<2>(join) << " " << std::get<3>(join) << " ";
+    }
 
     bool needs_where = find_toks.size() ||
       find_by_toks.size() ||
@@ -883,7 +889,7 @@ public:
       ss << "where";
 
       if (find_toks.size()) {
-        ss << " ";
+        ss << " (";
         for (auto it = find_toks.begin(); it != find_toks.end(); ++it) {
           ss << obj_t::table.name << "." << obj_t::table.get_primary_col_name() << " = ";
           ss << c->quote(*it);
@@ -891,10 +897,16 @@ public:
             ss << " or ";
           }
         }
+        ss << ")";
       }
 
       if (find_by_toks.size()) {
-        ss << " ";
+        if (find_by_toks.size()) {
+          ss << " and ";
+        } else {
+          ss << " ";
+        }
+
         for (auto it = find_by_toks.begin(); it != find_by_toks.end(); ++it) {
           ss << c->esc(it->first) << " = " << c->quote(it->second);
           if (std::next(it) != find_by_toks.end()) {
@@ -941,13 +953,50 @@ private:
     return *this;
   }
 
-  // todo
+  template<typename out_t>
+  void split(const std::string &s, char delim, out_t &result) {
+    std::stringstream ss;
+    ss.str(s);
+    std::string item;
+    while (std::getline(ss, item, delim)) {
+      result.push_back(item);
+    }
+  }
+
+  // allow nested joins
   template <typename other_obj_t, typename other_val_t, typename target_obj_t>
   pqxx_adapter_t add_join(
-    primary_key_t<other_val_t> (other_obj_t::*p2m),
-    foreign_key_t<other_obj_t, other_val_t> (target_obj_t::*)
+    foreign_key_t<other_obj_t, other_val_t> (target_obj_t::*p2m)
   ) {
-    return *this;
+    std::stringstream ss_left;
+    ss_left << other_obj_t::table.name << "." << other_obj_t::table.get_primary_col_name();
+    auto target_col_name = target_obj_t::table.get_col_name(p2m);
+    auto target_table_name = target_obj_t::table.name;
+    std::stringstream ss_right;
+    ss_right << target_table_name << "." << target_col_name;
+    auto right_col = target_obj_t::table.get_col_name(p2m);
+
+    // check if referenced key is included in
+    // join, otherwise throw error explaining
+    // that nested join queries do not work
+    // unless all tables link with each other
+    for (const auto &item : join_toks) {
+      std::vector<std::string> res;
+      auto left = ss_left.str();
+      split(left, '.', res);
+      if (res.size() > 0 && res[0] == std::get<1>(item)) {
+        join_toks.push_back(std::make_tuple(
+          "inner join",
+          target_obj_t::table.name,
+          left,
+          ss_right.str()
+        ));
+        return *this;
+      }
+    }
+    std::stringstream ss;
+    ss << "must join primary key for " << target_obj_t::table.name << " first";
+    throw ss.str();
   }
 
   template <typename col_val_t>
@@ -1068,17 +1117,40 @@ const table_t<model_c_t> model_c_t::table = {
   }
 };  // model_c_t
 
+class model_d_t {
+public:
+  const primary_key_t<std::string> &get_primary_key() const {
+    return id;
+  }
+
+  primary_key_t<std::string> id;
+
+  foreign_key_t<model_c_t, std::string> foreign;
+
+  std::string name;
+
+  static const table_t<model_d_t> table;
+};
+
+const table_t<model_d_t> model_d_t::table = {
+  "model_d_t", {
+    make_col("id", &model_d_t::id),
+    make_col("foreign", &model_d_t::foreign, &model_c_t::id),
+    make_col("name", &model_d_t::name)
+  }
+};  // model_c_t
+
 FIXTURE(adapter_to_sql) {
   // find
   auto subject_find_one = make_adapter(&model_a_t::id).find("one");
   EXPECT_EQ(
     subject_find_one.to_sql(),
-    "select * from model_a_t where model_a_t.id = 'one'"
+    "select model_a_t.* from model_a_t where (model_a_t.id = 'one')"
   );
   auto subject_find_two = make_adapter(&model_a_t::id).find("one").find("two");
   EXPECT_EQ(
     subject_find_two.to_sql(),
-    "select * from model_a_t where model_a_t.id = 'one' or model_a_t.id = 'two'"
+    "select model_a_t.* from model_a_t where (model_a_t.id = 'one' or model_a_t.id = 'two')"
   );
 
   // find_by
@@ -1107,7 +1179,8 @@ FIXTURE(adapter) {
   subject.order(&model_a_t::opacity, "desc");
   subject.order(&model_b_t::id);
   subject.order(&model_c_t::id);
-  subject.joins(&model_b_t::foreign, &model_c_t::foreign);
+  subject.joins(&model_b_t::foreign, &model_c_t::foreign, &model_d_t::foreign);
+  std::cout << subject.to_sql() << std::endl;
   subject.write(std::cout);
 
   auto related_subject = make_adapter(&model_b_t::id);
