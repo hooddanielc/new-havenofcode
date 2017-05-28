@@ -8,11 +8,11 @@
 namespace hoc {
 
 template <typename obj_t, typename val_t>
-class pqxx_adapter_t {
+class sql_adapter_t {
 public:
   const primary_key_t<val_t> (obj_t::*p2m);
 
-  pqxx_adapter_t(primary_key_t<val_t> (obj_t::*p2m_)) :
+  sql_adapter_t(primary_key_t<val_t> (obj_t::*p2m_)) :
     p2m(p2m_),
     is_distinct(false),
     limit_rows(0),
@@ -21,7 +21,7 @@ public:
   /*
    * distinct()
    * ============================================= */
-  pqxx_adapter_t &distinct() {
+  sql_adapter_t &distinct() {
     is_distinct = true;
     return *this;
   }
@@ -29,7 +29,7 @@ public:
   /*
    * limit()
    * ============================================= */
-  pqxx_adapter_t &limit(int limit_) {
+  sql_adapter_t &limit(int limit_) {
     limit_rows = limit_;
     return *this;
   }
@@ -37,7 +37,7 @@ public:
   /*
    * offset()
    * ============================================= */
-  pqxx_adapter_t &offset(int offset_) {
+  sql_adapter_t &offset(int offset_) {
     offset_rows = offset_;
     return *this;
   }
@@ -45,7 +45,7 @@ public:
   /*
    * find(value)
    * ============================================= */
-  pqxx_adapter_t &find(const val_t &val) {
+  sql_adapter_t &find(const val_t &val) {
     find_toks.push_back(str(val));
     return *this;
   }
@@ -53,14 +53,14 @@ public:
   /*
    * find_by(key, value)
    * ============================================= */
-  pqxx_adapter_t &find_by(const std::string &key, const std::string &val) {
+  sql_adapter_t &find_by(const std::string &key, const std::string &val) {
     find_by_toks[key] = str(val);
     return *this;
   }
 
   // find_by on current obj
   template <typename col_val_t>
-  pqxx_adapter_t &find_by(
+  sql_adapter_t &find_by(
     col_val_t (obj_t::*p2m),
     const decltype(col_val_t()) &val
   ) {
@@ -74,7 +74,7 @@ public:
   }
 
   // find_by on current primary obj
-  pqxx_adapter_t &find_by(
+  sql_adapter_t &find_by(
     primary_key_t<val_t> (obj_t::*p2m),
     const val_t &val
   ) {
@@ -89,7 +89,7 @@ public:
 
   // find_by on current foreign obj
   template <typename target_obj_t, typename col_val_t>
-  pqxx_adapter_t &find_by(
+  sql_adapter_t &find_by(
     foreign_key_t<target_obj_t, col_val_t> (obj_t::*p2m),
     const decltype(col_val_t()) &val
   ) {
@@ -104,7 +104,7 @@ public:
 
   // find_by on other obj
   template <typename other_obj_t, typename other_val_t>
-  pqxx_adapter_t &find_by(
+  sql_adapter_t &find_by(
     other_val_t (other_obj_t::*p2m),
     const decltype(other_val_t()) &val
   ) {
@@ -119,7 +119,7 @@ public:
 
   // find_by on other primary obj
   template <typename other_obj_t, typename other_val_t>
-  pqxx_adapter_t &find_by(
+  sql_adapter_t &find_by(
     primary_key_t<other_val_t> (other_obj_t::*p2m),
     const decltype(other_val_t()) &val
   ) {
@@ -134,7 +134,7 @@ public:
 
   // find_by on other foreign obj
   template <typename other_obj_t, typename target_t, typename col_val_t>
-  pqxx_adapter_t &find_by(
+  sql_adapter_t &find_by(
     foreign_key_t<target_t, col_val_t> (other_obj_t::*p2m),
     const decltype(col_val_t()) &val
   ) {
@@ -150,7 +150,7 @@ public:
   /*
    * where(condition)
    * ============================================= */
-  pqxx_adapter_t &where(const std::string &condition) {
+  sql_adapter_t &where(const std::string &condition) {
     where_toks.push_back(condition);
     return *this;
   }
@@ -158,13 +158,13 @@ public:
   /*
    * order(key, direction = asc)
    * ============================================= */
-  pqxx_adapter_t &order(const std::string &key, const std::string &direction = "") {
+  sql_adapter_t &order(const std::string &key, const std::string &direction = "") {
     order_toks[key] = direction;
     return *this;
   }
 
   template <typename other_obj_t, typename col_val_t>
-  pqxx_adapter_t &order(
+  sql_adapter_t &order(
     col_val_t (other_obj_t::*p2m),
     const std::string &direction = ""
   ) {
@@ -176,7 +176,7 @@ public:
   }
 
   template <typename other_obj_t, typename col_val_t>
-  pqxx_adapter_t &order(
+  sql_adapter_t &order(
     primary_key_t<val_t> (other_obj_t::*p2m),
     const std::string &direction = ""
   ) {
@@ -188,7 +188,7 @@ public:
   }
 
   template <typename other_obj_t, typename target_t, typename col_val_t>
-  pqxx_adapter_t &order(
+  sql_adapter_t &order(
     foreign_key_t<target_t, col_val_t> (other_obj_t::*p2m),
     const std::string &direction = ""
   ) {
@@ -203,12 +203,12 @@ public:
    * joins
    * ============================== */
   template <typename arg_t, typename... more_t>
-  pqxx_adapter_t &joins(arg_t arg, more_t... more) {
+  sql_adapter_t &joins(arg_t arg, more_t... more) {
     add_join(arg);
     return joins(more...);
   }
 
-  pqxx_adapter_t &joins() {
+  sql_adapter_t &joins() {
     return *this;
   }
 
@@ -244,7 +244,7 @@ public:
   }
 
   void write(std::ostream &strm) {
-    strm << "pqxx_adapter_t<" << obj_t::table.name << ">" << std::endl;
+    strm << "sql_adapter_t<" << obj_t::table.name << ">" << std::endl;
     print_list("find_toks", find_toks, strm);
     print_list("where_toks", where_toks, strm);
     print_map("find_by_toks", find_by_toks, strm);
@@ -359,7 +359,7 @@ private:
 
   // add join for current table
   template <typename target_obj_t>
-  pqxx_adapter_t &add_join(
+  sql_adapter_t &add_join(
     foreign_key_t<obj_t, val_t> (target_obj_t::*p2m)
   ) {
     std::stringstream ss_left;
@@ -390,7 +390,7 @@ private:
 
   // allow nested joins
   template <typename other_obj_t, typename other_val_t, typename target_obj_t>
-  pqxx_adapter_t add_join(
+  sql_adapter_t add_join(
     foreign_key_t<other_obj_t, other_val_t> (target_obj_t::*p2m)
   ) {
     std::stringstream ss_left;
@@ -431,13 +431,13 @@ private:
     return ss.str();
   }
 
-};  // pqxx_adapter_t<model_t>
+};  // sql_adapter_t<model_t>
 
 template <typename obj_t, typename val_t>
-pqxx_adapter_t<obj_t, val_t> make_adapter(
+sql_adapter_t<obj_t, val_t> make_sql_adapter(
   primary_key_t<val_t> (obj_t::*p2m)
 ) {
-  pqxx_adapter_t<obj_t, val_t> adapter(p2m);
+  sql_adapter_t<obj_t, val_t> adapter(p2m);
   return adapter;
 }
 

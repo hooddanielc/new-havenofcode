@@ -125,40 +125,40 @@ const table_t<model_d_t> model_d_t::table = {
 
 FIXTURE(adapter_to_sql) {
   // find
-  auto subject_find_one = make_adapter(&model_a_t::id).find("one");
+  auto subject_find_one = make_sql_adapter(&model_a_t::id).find("one");
   EXPECT_EQ(
     subject_find_one.to_sql(),
     "select model_a_t.* from model_a_t where (model_a_t.id = 'one')"
   );
-  auto subject_find_two = make_adapter(&model_a_t::id).find("one").find("two");
+  auto subject_find_two = make_sql_adapter(&model_a_t::id).find("one").find("two");
   EXPECT_EQ(
     subject_find_two.to_sql(),
     "select model_a_t.* from model_a_t where (model_a_t.id = 'one' or model_a_t.id = 'two')"
   );
 
   // find_by
-  auto subject_find_by = make_adapter(&model_a_t::id).find_by(&model_a_t::age, 1);
+  auto subject_find_by = make_sql_adapter(&model_a_t::id).find_by(&model_a_t::age, 1);
   EXPECT_EQ(
     subject_find_by.to_sql(),
     "select model_a_t.* from model_a_t where model_a_t.age = '1'"
   );
 
   // distinct limit
-  auto subject_limit_distinct = make_adapter(&model_a_t::id).distinct().limit(10);
+  auto subject_limit_distinct = make_sql_adapter(&model_a_t::id).distinct().limit(10);
   EXPECT_EQ(
     subject_limit_distinct.to_sql(),
     "select distinct model_a_t.* from model_a_t  limit 10"
   );
 
   // limit offset
-  auto subject_limit_offset = make_adapter(&model_a_t::id).distinct().limit(10).offset(10);
+  auto subject_limit_offset = make_sql_adapter(&model_a_t::id).distinct().limit(10).offset(10);
   EXPECT_EQ(
     subject_limit_offset.to_sql(),
     "select distinct model_a_t.* from model_a_t  limit 10 offset 10"
   );
 
   // where find_by find
-  auto subject_where_find = make_adapter(&model_a_t::id)
+  auto subject_where_find = make_sql_adapter(&model_a_t::id)
     .where("model_a_t.id like '%keyword$%'")
     .find("123")
     .find_by(&model_a_t::age, 321)
@@ -172,7 +172,7 @@ FIXTURE(adapter_to_sql) {
 }
 
 FIXTURE(adapter) {
-  auto subject = make_adapter(&model_a_t::id);
+  auto subject = make_sql_adapter(&model_a_t::id);
   subject.find_by(&model_a_t::age, 321);
   subject.find("123");
   subject.find("321");
@@ -195,7 +195,7 @@ FIXTURE(adapter) {
   subject.joins(&model_b_t::foreign, &model_c_t::foreign, &model_d_t::foreign);
   //subject.write(std::cout);
 
-  auto related_subject = make_adapter(&model_b_t::id);
+  auto related_subject = make_sql_adapter(&model_b_t::id);
   related_subject.find("123");
   related_subject.find("321");
   related_subject.find_by("id", "123");
