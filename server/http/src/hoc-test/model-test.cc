@@ -8,7 +8,6 @@
 #include <unordered_map>
 #include <mutex>
 #include <tuple>
-#include <mpark/variant.hpp>
 
 #include <hoc/db/connection.h>
 
@@ -1414,15 +1413,6 @@ FIXTURE(pqxx_adapter_t) {
   instance_b.name = "cool";
   std::stringstream ss2;
   model_b_t::table.write(&instance_b, ss2);
-}
-
-FIXTURE(mpark_variant_test) {
-  mpark::variant<int, float> int_var(1);
-  EXPECT_TRUE(mpark::get<int>(int_var) == 1);
-  mpark::variant<int, float> float_var(0.5f);
-  EXPECT_TRUE(mpark::get<float>(float_var) == 0.5f);
-  mpark::variant<int, float, std::string> str_var("cool?");
-  EXPECT_TRUE(mpark::get<std::string>(str_var) == "cool?");
 }
 
 int main(int argc, char *argv[]) {
