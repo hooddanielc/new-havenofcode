@@ -58,92 +58,15 @@ public:
     return *this;
   }
 
-  // find_by on current obj
-  template <typename col_val_t>
-  sql_adapter_t &find_by(
-    col_val_t (obj_t::*p2m),
-    const decltype(col_val_t()) &val
-  ) {
-    auto name = obj_t::table.get_col_name(p2m);
-    std::stringstream ss_name;
-    ss_name << obj_t::table.name << "." << name;
-    std::stringstream ss_val;
-    ss_val << val;
-    find_by_toks[ss_name.str()] = ss_val.str();
-    return *this;
-  }
-
-  // find_by on current primary obj
-  sql_adapter_t &find_by(
-    primary_key_t<val_t> (obj_t::*p2m),
-    const val_t &val
-  ) {
-    auto name = obj_t::table.get_col_name(p2m);
-    std::stringstream ss_name;
-    ss_name << obj_t::table.name << "." << name;
-    std::stringstream ss_val;
-    ss_val << val;
-    find_by_toks[ss_name.str()] = ss_val.str();
-    return *this;
-  }
-
-  // find_by on current foreign obj
-  template <typename target_obj_t, typename col_val_t>
-  sql_adapter_t &find_by(
-    foreign_key_t<target_obj_t, col_val_t> (obj_t::*p2m),
-    const decltype(col_val_t()) &val
-  ) {
-    auto name = obj_t::table.get_col_name(p2m);
-    std::stringstream ss_name;
-    ss_name << obj_t::table.name << "." << name;
-    std::stringstream ss_val;
-    ss_val << val;
-    find_by_toks[ss_name.str()] = ss_val.str();
-    return *this;
-  }
-
-  // find_by on other obj
   template <typename other_obj_t, typename other_val_t>
   sql_adapter_t &find_by(
     other_val_t (other_obj_t::*p2m),
-    const decltype(other_val_t()) &val
+    const std::string &val
   ) {
     auto name = other_obj_t::table.get_col_name(p2m);
     std::stringstream ss_name;
     ss_name << other_obj_t::table.name << "." << name;
-    std::stringstream ss_val;
-    ss_val << val;
-    find_by_toks[ss_name.str()] = ss_val.str();
-    return *this;
-  }
-
-  // find_by on other primary obj
-  template <typename other_obj_t, typename other_val_t>
-  sql_adapter_t &find_by(
-    primary_key_t<other_val_t> (other_obj_t::*p2m),
-    const decltype(other_val_t()) &val
-  ) {
-    auto name = other_obj_t::table.get_col_name(p2m);
-    std::stringstream ss_name;
-    ss_name << other_obj_t::table.name << "." << name;
-    std::stringstream ss_val;
-    ss_val << val;
-    find_by_toks[ss_name.str()] = ss_val.str();
-    return *this;
-  }
-
-  // find_by on other foreign obj
-  template <typename other_obj_t, typename target_t, typename col_val_t>
-  sql_adapter_t &find_by(
-    foreign_key_t<target_t, col_val_t> (other_obj_t::*p2m),
-    const decltype(col_val_t()) &val
-  ) {
-    auto name = other_obj_t::table.get_col_name(p2m);
-    std::stringstream ss_name;
-    ss_name << other_obj_t::table.name << "." << name;
-    std::stringstream ss_val;
-    ss_val << val;
-    find_by_toks[ss_name.str()] = ss_val.str();
+    find_by_toks[ss_name.str()] = val;
     return *this;
   }
 
@@ -166,30 +89,6 @@ public:
   template <typename other_obj_t, typename col_val_t>
   sql_adapter_t &order(
     col_val_t (other_obj_t::*p2m),
-    const std::string &direction = ""
-  ) {
-    auto name = other_obj_t::table.get_col_name(p2m);
-    std::stringstream ss_name;
-    ss_name << other_obj_t::table.name << "." << name;
-    order_toks[ss_name.str()] = direction;
-    return *this;
-  }
-
-  template <typename other_obj_t, typename col_val_t>
-  sql_adapter_t &order(
-    primary_key_t<val_t> (other_obj_t::*p2m),
-    const std::string &direction = ""
-  ) {
-    auto name = other_obj_t::table.get_col_name(p2m);
-    std::stringstream ss_name;
-    ss_name << other_obj_t::table.name << "." << name;
-    order_toks[ss_name.str()] = direction;
-    return *this;
-  }
-
-  template <typename other_obj_t, typename target_t, typename col_val_t>
-  sql_adapter_t &order(
-    foreign_key_t<target_t, col_val_t> (other_obj_t::*p2m),
     const std::string &direction = ""
   ) {
     auto name = other_obj_t::table.get_col_name(p2m);
@@ -262,9 +161,7 @@ public:
   /*
    * to_sql();
    * ======================= */
-  std::string to_sql(
-    std::shared_ptr<pqxx::connection> c = hoc::db::anonymous_connection()
-  ) {
+  std::string to_sql() {
     std::stringstream ss;
     ss << "select ";
 
@@ -292,7 +189,7 @@ public:
         ss << " (";
         for (auto it = find_toks.begin(); it != find_toks.end(); ++it) {
           ss << obj_t::table.name << "." << obj_t::table.get_primary_col_name() << " = ";
-          ss << c->quote(*it);
+          ss << *it;
           if (std::next(it) != find_toks.end()) {
             ss << " or ";
           }
@@ -323,7 +220,7 @@ public:
         }
 
         for (auto it = find_by_toks.begin(); it != find_by_toks.end(); ++it) {
-          ss << c->esc(it->first) << " = " << c->quote(it->second);
+          ss << it->first << " = " << it->second;
           if (std::next(it) != find_by_toks.end()) {
             ss << " and ";
           }

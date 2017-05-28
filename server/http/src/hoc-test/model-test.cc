@@ -125,19 +125,19 @@ const table_t<model_d_t> model_d_t::table = {
 
 FIXTURE(adapter_to_sql) {
   // find
-  auto subject_find_one = make_sql_adapter(&model_a_t::id).find("one");
+  auto subject_find_one = make_sql_adapter(&model_a_t::id).find("'one'");
   EXPECT_EQ(
     subject_find_one.to_sql(),
     "select model_a_t.* from model_a_t where (model_a_t.id = 'one')"
   );
-  auto subject_find_two = make_sql_adapter(&model_a_t::id).find("one").find("two");
+  auto subject_find_two = make_sql_adapter(&model_a_t::id).find("'one'").find("'two'");
   EXPECT_EQ(
     subject_find_two.to_sql(),
     "select model_a_t.* from model_a_t where (model_a_t.id = 'one' or model_a_t.id = 'two')"
   );
 
   // find_by
-  auto subject_find_by = make_sql_adapter(&model_a_t::id).find_by(&model_a_t::age, 1);
+  auto subject_find_by = make_sql_adapter(&model_a_t::id).find_by(&model_a_t::age, "'1'");
   EXPECT_EQ(
     subject_find_by.to_sql(),
     "select model_a_t.* from model_a_t where model_a_t.age = '1'"
@@ -160,8 +160,8 @@ FIXTURE(adapter_to_sql) {
   // where find_by find
   auto subject_where_find = make_sql_adapter(&model_a_t::id)
     .where("model_a_t.id like '%keyword$%'")
-    .find("123")
-    .find_by(&model_a_t::age, 321)
+    .find("'123'")
+    .find_by(&model_a_t::age, "'321'")
     .limit(10);
 
   EXPECT_EQ(
@@ -173,15 +173,12 @@ FIXTURE(adapter_to_sql) {
 
 FIXTURE(adapter) {
   auto subject = make_sql_adapter(&model_a_t::id);
-  subject.find_by(&model_a_t::age, 321);
+  subject.find_by(&model_a_t::age, "'321'");
   subject.find("123");
   subject.find("321");
   subject.find_by("id", "123");
-  subject.find_by(&model_a_t::id, "321");
-  subject.find_by(&model_a_t::opacity, 0.1);
-  subject.find_by(&model_a_t::huge_num, 1000000);
-  subject.find_by(&model_a_t::foreign, 123);
-  subject.find_by(&model_c_t::id, "420");
+  subject.find_by(&model_a_t::id, "'321'");
+  subject.find_by(&model_c_t::id, "'420'");
   subject.find_by(&model_c_t::name, "alexander");
   subject.find_by(&model_c_t::foreign, "for_321");
   subject.where("id > 0");
