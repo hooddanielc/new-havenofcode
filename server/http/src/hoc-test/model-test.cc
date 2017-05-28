@@ -636,7 +636,35 @@ class pqxx_adapter_t {
 public:
   const primary_key_t<val_t> (obj_t::*p2m);
 
-  pqxx_adapter_t(primary_key_t<val_t> (obj_t::*p2m_)) : p2m(p2m_) {}
+  pqxx_adapter_t(primary_key_t<val_t> (obj_t::*p2m_)) :
+    p2m(p2m_),
+    is_distinct(false),
+    limit_rows(0),
+    offset_rows(0) {}
+
+  /*
+   * distinct()
+   * ============================================= */
+  pqxx_adapter_t &distinct() {
+    is_distinct = true;
+    return *this;
+  }
+
+  /*
+   * limit()
+   * ============================================= */
+  pqxx_adapter_t &limit(int limit_) {
+    limit_rows = limit_;
+    return *this;
+  }
+
+  /*
+   * offset()
+   * ============================================= */
+  pqxx_adapter_t &offset(int offset_) {
+    offset_rows = offset_;
+    return *this;
+  }
 
   /*
    * find(value)
@@ -744,10 +772,10 @@ public:
   }
 
   /*
-   * where(statement)
+   * where(condition)
    * ============================================= */
-  pqxx_adapter_t &where(const std::string &stmt) {
-    where_toks.push_back(stmt);
+  pqxx_adapter_t &where(const std::string &condition) {
+    where_toks.push_back(condition);
     return *this;
   }
 
@@ -851,19 +879,9 @@ public:
   // todo create_with
   // todo group
   // todo having
-  // todo distinct
   // todo includes
-  // todo joins
-  // todo left_outer_joins
-  // todo limit
-  // todo lock
-  // todo none
-  // todo offset
-  // todo readonly
   // todo references
-  // todo reorder
-  // todo reverse_order
-  // todo select
+  // todo like
 
   /*
    * to_sql();
@@ -872,7 +890,13 @@ public:
     std::shared_ptr<pqxx::connection> c = hoc::db::anonymous_connection()
   ) {
     std::stringstream ss;
-    ss << "select " << obj_t::table.name << ".* from " << obj_t::table.name << " ";
+    ss << "select ";
+
+    if (is_distinct) {
+      ss << "distinct ";
+    }
+
+    ss << obj_t::table.name << ".* from " << obj_t::table.name << " ";
 
     // eval joins
     for (const auto &join : join_toks) {
@@ -900,8 +924,23 @@ public:
         ss << ")";
       }
 
+      if (where_toks.size()) {
+        if (find_toks.size()) {
+          ss << " or (";
+        } else {
+          ss << " (";
+        }
+        for (auto it = where_toks.begin(); it != where_toks.end(); ++it) {
+          ss << *it;
+          if (std::next(it) != where_toks.end()) {
+            ss << " or ";
+          }
+        }
+        ss << ")";
+      }
+
       if (find_by_toks.size()) {
-        if (find_by_toks.size()) {
+        if (find_toks.size() || where_toks.size()) {
           ss << " and ";
         } else {
           ss << " ";
@@ -914,13 +953,23 @@ public:
           }
         }
       }
+    }
 
+    if (limit_rows) {
+      ss << " limit " << limit_rows;
+    }
+
+    if (offset_rows) {
+      ss << " offset " << offset_rows;
     }
 
     return ss.str();
   }
 
 private:
+  bool is_distinct;
+  int limit_rows;
+  int offset_rows;
   std::vector<val_t> find_toks;
   std::vector<std::string> where_toks;
   std::unordered_map<std::string, std::string> find_by_toks;
@@ -1155,7 +1204,37 @@ FIXTURE(adapter_to_sql) {
 
   // find_by
   auto subject_find_by = make_adapter(&model_a_t::id).find_by(&model_a_t::age, 1);
-  std::cout << subject_find_by.to_sql() << std::endl;
+  EXPECT_EQ(
+    subject_find_by.to_sql(),
+    "select model_a_t.* from model_a_t where model_a_t.age = '1'"
+  );
+
+  // distinct limit
+  auto subject_limit_distinct = make_adapter(&model_a_t::id).distinct().limit(10);
+  EXPECT_EQ(
+    subject_limit_distinct.to_sql(),
+    "select distinct model_a_t.* from model_a_t  limit 10"
+  );
+
+  // limit offset
+  auto subject_limit_offset = make_adapter(&model_a_t::id).distinct().limit(10).offset(10);
+  EXPECT_EQ(
+    subject_limit_offset.to_sql(),
+    "select distinct model_a_t.* from model_a_t  limit 10 offset 10"
+  );
+
+  // where find_by find
+  auto subject_where_find = make_adapter(&model_a_t::id)
+    .where("model_a_t.id like '%keyword$%'")
+    .find("123")
+    .find_by(&model_a_t::age, 321)
+    .limit(10);
+
+  EXPECT_EQ(
+    subject_where_find.to_sql(),
+    "select model_a_t.* from model_a_t where (model_a_t.id = '123') or "
+    "(model_a_t.id like '%keyword$%') and model_a_t.age = '321' limit 10"
+  );
 }
 
 FIXTURE(adapter) {
@@ -1180,8 +1259,7 @@ FIXTURE(adapter) {
   subject.order(&model_b_t::id);
   subject.order(&model_c_t::id);
   subject.joins(&model_b_t::foreign, &model_c_t::foreign, &model_d_t::foreign);
-  std::cout << subject.to_sql() << std::endl;
-  subject.write(std::cout);
+  //subject.write(std::cout);
 
   auto related_subject = make_adapter(&model_b_t::id);
   related_subject.find("123");
