@@ -1,13 +1,11 @@
 #include <hoc-test/test-helper.h>
 #include <hoc-active-record/active-record.h>
+#include <hoc/db/connection.h>
 
 using namespace hoc;
 
-class model_z_t {
+class model_z_t: public model_t<model_z_t> {
 public:
-  const primary_key_t<int> &get_primary_key() const {
-    return id;
-  }
 
   primary_key_t<int> id;
 
@@ -24,11 +22,8 @@ const table_t<model_z_t> model_z_t::table = {
   }
 };  // model_z_t
 
-class model_a_t {
+class model_a_t: public model_t<model_a_t> {
 public:
-  const primary_key_t<std::string> &get_primary_key() const {
-    return id;
-  }
 
   primary_key_t<std::string> id;
 
@@ -54,11 +49,8 @@ const table_t<model_a_t> model_a_t::table = {
   }
 };  // model_a_t
 
-class model_b_t {
+class model_b_t: public model_t<model_b_t> {
 public:
-  const primary_key_t<std::string> &get_primary_key() const {
-    return id;
-  }
 
   primary_key_t<std::string> id;
 
@@ -77,11 +69,8 @@ const table_t<model_b_t> model_b_t::table = {
   }
 };  // model_b_t
 
-class model_c_t {
+class model_c_t: public model_t<model_c_t> {
 public:
-  const primary_key_t<std::string> &get_primary_key() const {
-    return id;
-  }
 
   primary_key_t<std::string> id;
 
@@ -100,11 +89,8 @@ const table_t<model_c_t> model_c_t::table = {
   }
 };  // model_c_t
 
-class model_d_t {
+class model_d_t: public model_t<model_d_t> {
 public:
-  const primary_key_t<std::string> &get_primary_key() const {
-    return id;
-  }
 
   primary_key_t<std::string> id;
 
@@ -345,6 +331,84 @@ FIXTURE(pqxx_adapter_t) {
   instance_b.name = "cool";
   std::stringstream ss2;
   model_b_t::table.write(&instance_b, ss2);
+}
+
+
+const char *create_tables = R"(
+create table model_z_t (
+  id      serial primary key,
+  age     int default 1 not null
+);
+
+create table model_a_t (
+  id          uuid primary key default uuid_generate_v4() not null,
+  opacity     numeric (1, 1) default 1.0 not null,
+  age         int default 1 not null,
+  huge_num    bigint not null,
+  "foreign"     int not null,
+  foreign key ("foreign") references model_z_t(id)
+);
+
+insert into model_z_t (id, age) values (1, 2);
+insert into model_a_t (opacity, age, huge_num, "foreign") values (0.1, 3, 6444, 1);
+)";
+
+const char *drop_tables = R"(
+delete from model_a_t where id is not null;
+delete from model_z_t where id is not null;
+drop table model_a_t;
+drop table model_z_t;
+)";
+
+FIXTURE(look_at_session_stuff) {
+  EXPECT_OK([]() {
+    auto c = hoc::db::super_user_connection();
+    pqxx::work w(*c);
+    w.exec(create_tables);
+
+    w.exec("insert into model_z_t (id, age) values (2, 2);");
+    w.exec("insert into model_z_t (id, age) values (3, 2);");
+
+    for (int i = 0; i < 20; ++i) {
+      w.exec("insert into model_a_t (opacity, age, huge_num, \"foreign\") values (0.1, 3, 6444, 1);");
+    }
+
+    for (int i = 0; i < 20; ++i) {
+      w.exec("insert into model_a_t (opacity, age, huge_num, \"foreign\") values (0.1, 3, 6444, 2);");
+    }
+
+    for (int i = 0; i < 20; ++i) {
+      w.exec("insert into model_a_t (opacity, age, huge_num, \"foreign\") values (0.1, 3, 6444, 3);");
+    }
+
+
+    w.commit();
+  });
+
+  EXPECT_OK([]() {
+    auto c = hoc::db::super_user_connection();
+    pqxx::work w(*c);
+    auto res = w.exec(
+      "select * from model_a_t "
+      "inner join model_z_t on model_z_t.id = model_a_t.foreign"
+    );
+
+    for (int i = 0; i < int(res.size()); ++i) {
+      auto record = factory_t<model_a_t, std::string>::get()->require(res[i]);
+      EXPECT_TRUE(record->id == res[i].at("id").as<std::string>());
+      EXPECT_TRUE(record->opacity == 0.1);
+      EXPECT_TRUE(record->age == 3);
+      EXPECT_TRUE(record->huge_num == 6444);
+      EXPECT_TRUE(record->foreign == 1 || record->foreign == 2 || record->foreign == 3);
+    }
+  });
+
+  EXPECT_OK([]() {
+    auto c = hoc::db::super_user_connection();
+    pqxx::work w(*c);
+    w.exec(drop_tables);
+    w.commit();
+  });
 }
 
 int main(int argc, char *argv[]) {

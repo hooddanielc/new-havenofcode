@@ -7,6 +7,8 @@
 #include <ostream>
 
 #include <hoc-active-record/valuable.h>
+#include <hoc/db/connection.h>
+#include <hoc/json.h>
 
 namespace hoc {
 
@@ -39,6 +41,34 @@ public:
     return shared_ptr;
   }
 
+  std::shared_ptr<obj_t> require(const pqxx::tuple &res) {
+    read_table();
+    std::shared_ptr<obj_t> result;
+
+    for (int i = 0; i < int(res.size()); ++i) {
+      if (
+        int(res[i].table()) == postgres_oid &&
+        column_order[res[i].num()] == obj_t::table.get_primary_col_name()
+      ) {
+        result = require(res[i].as<val_t>());
+      }
+    }
+
+    if (!result) {
+      return result;
+    }
+
+    for (int i = 0; i < int(res.size()); ++i) {
+      if (int(res[i].table()) == postgres_oid) {
+        if (auto col = obj_t::table.get_col(column_order[res[i].table_column()])) {
+          col->assign(&*result, res[i]);
+        }
+      }
+    }
+
+    return result;
+  }
+
   static factory_t *get() {
     static factory_t factory;
     return &factory;
@@ -46,13 +76,37 @@ public:
 
 private:
 
-  factory_t() = default;
+  factory_t() : postgres_oid(0) {}
 
   ~factory_t() = default;
 
   std::mutex mutex;
 
   std::unordered_map<val_t, std::weak_ptr<obj_t>> weak_ptrs;
+
+  int postgres_oid;
+
+  std::unordered_map<int, std::string> column_order;
+
+  void read_table() {
+    if (!postgres_oid) {
+      auto c = hoc::db::super_user_connection();
+      pqxx::work w(*c);
+      std::stringstream ss_oid;
+      ss_oid << "select '" << obj_t::table.name << "'::regclass::oid";
+      auto oid = w.exec(ss_oid);
+      postgres_oid = oid[0][0].as<int>();
+      std::stringstream ss_column_order;
+      ss_column_order << "select column_name, ordinal_position from information_schema.columns "
+        "where table_schema = 'public' and table_name = '" << obj_t::table.name << "'";
+      auto order = w.exec(ss_column_order);
+      for (int i = 0; i < int(order.size()); ++i) {
+        auto name = order[i][0].as<std::string>();
+        auto num = order[i][1].as<int>();
+        column_order[num - 1] = name;
+      }
+    }
+  }
 
 };  // factory_t<obj_t, val_t>
 
@@ -118,6 +172,8 @@ public:
 
   virtual void write(const obj_t *obj, std::ostream &strm) const = 0;
 
+  virtual void assign(obj_t *obj, const pqxx::result::field &field) const = 0;
+
   virtual bool is_primary_key() const {
     return false;
   }
@@ -150,6 +206,10 @@ public:
     strm << (obj->*p2m);
   }
 
+  virtual void assign(obj_t *obj, const pqxx::result::field &field) const override {
+    obj->*p2m = field.as<val_t>();
+  }
+
   virtual bool is_primary_key() const override {
     return false;
   }
@@ -178,6 +238,10 @@ public:
     strm << (obj->*p2m);
   }
 
+  virtual void assign(obj_t *obj, const pqxx::result::field &field) const override {
+    obj->*p2m = field.as<val_t>();
+  }
+
   virtual bool is_primary_key() const override {
     return true;
   }
@@ -203,6 +267,10 @@ public:
 
   virtual void write(const obj_t *obj, std::ostream &strm) const override {
     strm << (obj->*p2m);
+  }
+
+  virtual void assign(obj_t *obj, const pqxx::result::field &field) const override {
+    obj->*p2m = field.as<val_t>();
   }
 
   virtual bool is_primary_key() const override {
@@ -265,8 +333,10 @@ public:
     for (const auto &col: cols) {
       if (col->is_primary_key()) {
         primary_col_name = col->name;
-        break;
+        primary_col = col;
       }
+
+      break;
     }
 
     if (primary_col_name.empty()) {
@@ -354,6 +424,16 @@ public:
     throw std::runtime_error("column does not exist, did you forget to make_col?");
   }
 
+  std::shared_ptr<any_col_of_t<obj_t>> get_col(const std::string &col_name) const {
+    for (const auto &col: cols) {
+      if (col->name == col_name) {
+        return col;
+      }
+    }
+
+    return nullptr;
+  }
+
   std::vector<std::shared_ptr<any_col_of_t<obj_t>>> get_cols() const {
     return cols;
   }
@@ -362,8 +442,24 @@ private:
 
   table_t *singleton;
   std::string primary_col_name;
+  std::shared_ptr<any_col_of_t<obj_t>> primary_col;
   std::vector<std::shared_ptr<any_col_of_t<obj_t>>> cols;
 
 };  // table_t<obj_t>
+
+template <typename obj_t>
+class model_t {
+public:
+
+  auto get_primary_key() const {
+    return static_cast<const obj_t*>(this)->id;
+  }
+
+  // todo
+  dj::json_t to_json() {
+    return dj::json_t::empty_object;
+  }
+
+};
 
 }   // hoc
