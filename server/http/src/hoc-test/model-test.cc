@@ -7,20 +7,17 @@ using namespace hoc;
 class model_z_t: public model_t<model_z_t> {
 public:
 
+  model_z_t() : id(0), age(0) {}
+
   primary_key_t<int> id;
 
   int age;
 
   static const table_t<model_z_t> table;
 
-};
+  std::vector<std::string> has_many_model_as;
 
-const table_t<model_z_t> model_z_t::table = {
-  "model_z_t", {
-    make_col("id", &model_z_t::id),
-    make_col("age", &model_z_t::age)
-  }
-};  // model_z_t
+};
 
 class model_a_t: public model_t<model_a_t> {
 public:
@@ -39,15 +36,13 @@ public:
 
 };
 
-const table_t<model_a_t> model_a_t::table = {
-  "model_a_t", {
-    make_col("id", &model_a_t::id),
-    make_col("opacity", &model_a_t::opacity),
-    make_col("huge_num", &model_a_t::huge_num),
-    make_col("age", &model_a_t::age),
-    make_col("foreign", &model_a_t::foreign, &model_z_t::id)
+const table_t<model_z_t> model_z_t::table = {
+  "model_z_t", {
+    make_col("id", &model_z_t::id),
+    make_col("age", &model_z_t::age),
+    make_col("has_many_model_as", &model_z_t::has_many_model_as, &model_a_t::foreign)
   }
-};  // model_a_t
+};  // model_z_t
 
 class model_b_t: public model_t<model_b_t> {
 public:
@@ -60,6 +55,16 @@ public:
 
   static const table_t<model_b_t> table;
 };
+
+const table_t<model_a_t> model_a_t::table = {
+  "model_a_t", {
+    make_col("id", &model_a_t::id),
+    make_col("opacity", &model_a_t::opacity),
+    make_col("huge_num", &model_a_t::huge_num),
+    make_col("age", &model_a_t::age),
+    make_col("foreign", &model_a_t::foreign, &model_z_t::id)
+  }
+};  // model_a_t
 
 const table_t<model_b_t> model_b_t::table = {
   "model_b_t", {
@@ -381,7 +386,6 @@ FIXTURE(look_at_session_stuff) {
       w.exec("insert into model_a_t (opacity, age, huge_num, \"foreign\") values (0.1, 3, 6444, 3);");
     }
 
-
     w.commit();
   });
 
@@ -393,13 +397,27 @@ FIXTURE(look_at_session_stuff) {
       "inner join model_z_t on model_z_t.id = model_a_t.foreign"
     );
 
+    std::vector<std::shared_ptr<model_a_t>> vec1;
+    std::vector<std::shared_ptr<model_z_t>> vec2;
+
     for (int i = 0; i < int(res.size()); ++i) {
       auto record = factory_t<model_a_t, std::string>::get()->require(res[i]);
-      EXPECT_TRUE(record->id == res[i].at("id").as<std::string>());
-      EXPECT_TRUE(record->opacity == 0.1);
-      EXPECT_TRUE(record->age == 3);
-      EXPECT_TRUE(record->huge_num == 6444);
-      EXPECT_TRUE(record->foreign == 1 || record->foreign == 2 || record->foreign == 3);
+      //model_a_t::table.write(&*record, std::cout);
+      vec1.push_back(record);
+      // EXPECT_TRUE(record->id == res[i].at("id").as<std::string>());
+      // EXPECT_TRUE(record->opacity == 0.1);
+      // EXPECT_TRUE(record->age == 3);
+      // EXPECT_TRUE(record->huge_num == 6444);
+      // EXPECT_TRUE(record->foreign == 1 || record->foreign == 2 || record->foreign == 3);
+    }
+
+    // now select only model_z_t
+    auto res2 = w.exec("select * from model_z_t");
+    for (int i = 0; i < int(res2.size()); ++i) {
+      auto record = factory_t<model_z_t, int>::get()->require(res2[i]);
+      vec2.push_back(record);
+      model_z_t::table.write(&*record, std::cout);
+      std::cout << record->to_json() << std::endl;
     }
   });
 

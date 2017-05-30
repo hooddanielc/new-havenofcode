@@ -19,8 +19,8 @@ public:
   std::shared_ptr<obj_t> require(const val_t &val) {
     std::lock_guard<std::mutex> lock { mutex };
     auto pair = weak_ptrs.emplace(val, std::weak_ptr<obj_t> {});
-    auto iter = pair.first;
-    auto weak_ptr = iter->second;
+    auto &iter = pair.first;
+    auto &weak_ptr = iter->second;
     auto result = weak_ptr.lock();
     if (!result) {
       try {
@@ -48,7 +48,7 @@ public:
     for (int i = 0; i < int(res.size()); ++i) {
       if (
         int(res[i].table()) == postgres_oid &&
-        column_order[res[i].num()] == obj_t::table.get_primary_col_name()
+        column_order[res[i].table_column()] == obj_t::table.get_primary_col_name()
       ) {
         result = require(res[i].as<val_t>());
       }
@@ -113,6 +113,7 @@ private:
 template <typename val_t>
 class primary_key_t: public valuable_t<val_t> {
 public:
+  using valuable_t<val_t>::valuable_t;
   using valuable_t<val_t>::operator=;
 
   const val_t *operator->() const {
@@ -124,6 +125,7 @@ public:
 template <typename obj_t, typename val_t>
 class foreign_key_t: public valuable_t<val_t> {
 public:
+  using valuable_t<val_t>::valuable_t;
   using valuable_t<val_t>::operator=;
 
   foreign_key_t &operator=(const obj_t &other) {
@@ -133,6 +135,13 @@ public:
   }
 
   std::shared_ptr<obj_t> operator->() const {
+    if (!obj) {
+      obj = factory_t<obj_t, val_t>::get()->require(this->val);
+    }
+    return obj;
+  }
+
+  std::shared_ptr<obj_t> get_obj() const {
     if (!obj) {
       obj = factory_t<obj_t, val_t>::get()->require(this->val);
     }
@@ -172,6 +181,8 @@ public:
 
   virtual void write(const obj_t *obj, std::ostream &strm) const = 0;
 
+  virtual void write(const obj_t *obj, dj::json_t &json) const = 0;
+
   virtual void assign(obj_t *obj, const pqxx::result::field &field) const = 0;
 
   virtual bool is_primary_key() const {
@@ -179,6 +190,10 @@ public:
   }
 
   virtual bool is_foreign_key() const {
+    return false;
+  }
+
+  virtual bool is_many() const {
     return false;
   }
 
@@ -206,6 +221,10 @@ public:
     strm << (obj->*p2m);
   }
 
+  virtual void write(const obj_t *obj, dj::json_t &json) const override {
+    json[any_col_t::name] = obj->*p2m;
+  }
+
   virtual void assign(obj_t *obj, const pqxx::result::field &field) const override {
     obj->*p2m = field.as<val_t>();
   }
@@ -215,6 +234,10 @@ public:
   }
 
   virtual bool is_foreign_key() const override {
+    return false;
+  }
+
+  virtual bool is_many() const override {
     return false;
   }
 
@@ -238,6 +261,10 @@ public:
     strm << (obj->*p2m);
   }
 
+  virtual void write(const obj_t *obj, dj::json_t &json) const override {
+    json[any_col_t::name] = (obj->*p2m).get();
+  }
+
   virtual void assign(obj_t *obj, const pqxx::result::field &field) const override {
     obj->*p2m = field.as<val_t>();
   }
@@ -250,7 +277,14 @@ public:
     return false;
   }
 
+  virtual bool is_many() const override {
+    return false;
+  }
+
 };  // primary_col_t<obj_t, val_t>
+
+template <typename obj_t, typename val_t, typename target_obj_t, typename target_val_t>
+class has_many_col_t;
 
 template <typename obj_t, typename val_t, typename target_obj_t>
 class foreign_col_t final: public any_col_of_t<obj_t> {
@@ -269,8 +303,13 @@ public:
     strm << (obj->*p2m);
   }
 
+  virtual void write(const obj_t *obj, dj::json_t &json) const override {
+    json[any_col_t::name] = (obj->*p2m).get();
+  }
+
   virtual void assign(obj_t *obj, const pqxx::result::field &field) const override {
     obj->*p2m = field.as<val_t>();
+    add_has_many_record(obj->get_primary_key(), obj);
   }
 
   virtual bool is_primary_key() const override {
@@ -281,11 +320,88 @@ public:
     return true;
   }
 
+  virtual bool is_many() const override {
+    return false;
+  }
+
   const p2m_t p2m;
 
   const p2m_target_t p2m_target;
 
+private:
+
+  template <typename primary_val_t>
+  void add_has_many_record(const primary_key_t<primary_val_t> &id, obj_t *obj) const {
+    using for_t = has_many_col_t<target_obj_t, val_t, obj_t, primary_val_t>*;
+    for (auto &col: target_obj_t::table.get_cols()) {
+      if (for_t advanced_col = dynamic_cast<for_t>(&*col)) {
+        if (advanced_col->p2m_target == p2m) {
+          auto &list = *((obj->*p2m).get_obj()).*(advanced_col->p2m);
+          if (std::find(list.begin(), list.end(), id.get()) == list.end()) {
+            list.push_back(id.get());
+          }
+        }
+      }
+    }
+  }
+
 };  // foreign_col_t<obj_t, val_t, target_obj_t, target_val_t>
+
+template <typename obj_t, typename val_t, typename target_obj_t, typename target_val_t>
+class has_many_col_t final: public any_col_of_t<obj_t> {
+public:
+
+  using p2m_t = std::vector<target_val_t> (obj_t::*);
+  using p2m_target_t = foreign_key_t<obj_t, val_t> (target_obj_t::*);
+
+  explicit has_many_col_t(p2m_t p2m_, p2m_target_t p2m_target_)
+      : p2m(p2m_), p2m_target(p2m_target_) {}
+
+  explicit has_many_col_t(const std::string &name_, p2m_t p2m_, p2m_target_t p2m_target_)
+      : any_col_of_t<obj_t>(name_), p2m(p2m_), p2m_target(p2m_target_) {}
+
+  virtual void write(const obj_t *obj, std::ostream &strm) const override {
+    bool first = true;
+    for (const auto &item: (obj->*p2m)) {
+      if (!first) {
+        strm << ", ";
+      }
+      strm << item;
+      first = false;
+    }
+  }
+
+  virtual void write(const obj_t *obj, dj::json_t &json) const override {
+    dj::json_t::array_t array;
+
+    for (const auto &item: (obj->*p2m)) {
+      array.emplace_back(item);
+    }
+
+    json[any_col_t::name] = array;
+  }
+
+  virtual void assign(obj_t *, const pqxx::result::field &) const override {
+    throw std::runtime_error("cannot assign has_many_col_t using pqxx::result::field");
+  }
+
+  virtual bool is_primary_key() const override {
+    return false;
+  }
+
+  virtual bool is_foreign_key() const override {
+    return false;
+  }
+
+  virtual bool is_many() const override {
+    return true;
+  }
+
+  const p2m_t p2m;
+
+  const p2m_target_t p2m_target;
+
+};  // has_many_col_t<obj_t, val_t, target_obj_t, target_val_t>
 
 template <typename obj_t, typename val_t>
 inline std::shared_ptr<col_t<obj_t, val_t>> make_col(
@@ -310,6 +426,15 @@ inline std::shared_ptr<foreign_col_t<obj_t, val_t, target_obj_t>> make_col(
   primary_key_t<val_t> (target_obj_t::*p2m_target)
 ) {
   return std::make_shared<foreign_col_t<obj_t, val_t, target_obj_t>>(name, p2m, p2m_target);
+}
+
+template <typename obj_t, typename val_t, typename target_obj_t, typename target_val_t>
+inline std::shared_ptr<has_many_col_t<obj_t, val_t, target_obj_t, target_val_t>> make_col(
+  const std::string &name,
+  std::vector<target_val_t> (obj_t::*p2m),
+  foreign_key_t<obj_t, val_t> (target_obj_t::*p2m_target)
+) {
+  return std::make_shared<has_many_col_t<obj_t, val_t, target_obj_t, target_val_t>>(name, p2m, p2m_target);
 }
 
 // require primary key for foreign key columns
@@ -457,7 +582,13 @@ public:
 
   // todo
   dj::json_t to_json() {
-    return dj::json_t::empty_object;
+    auto result = dj::json_t::empty_object;
+
+    for (const auto &col: obj_t::table.get_cols()) {
+      col->write(static_cast<obj_t*>(this), result);
+    }
+
+    return result;
   }
 
 };
