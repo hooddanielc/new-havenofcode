@@ -25,6 +25,7 @@ public:
     if (!result) {
       try {
         result = std::make_shared<obj_t>();
+        result->set_primary_key(val);
         weak_ptr = result;
       } catch (...) {
         weak_ptrs.erase(iter);
@@ -493,6 +494,12 @@ public:
     strm << std::endl;
   }
 
+  void write(const obj_t *obj, dj::json_t &json) const {
+    for (const auto &col: cols) {
+      col->write(obj, json);
+    }
+  }
+
   /*
    * get_col_name(&model::primary_key_member)
    *
@@ -549,6 +556,56 @@ public:
     throw std::runtime_error("column does not exist, did you forget to make_col?");
   }
 
+  /*
+   * get_col(&model::member)
+   */
+  template <typename val_t>
+  std::shared_ptr<any_col_of_t<obj_t>> get_col(val_t (obj_t::*p2m)) const {
+    for (const auto &col: cols) {
+      if (const col_t<obj_t, val_t> *cast = dynamic_cast<const col_t<obj_t, val_t>*>(&*col)) {
+        if (cast->p2m == p2m) {
+          return col;
+        }
+      }
+    }
+    throw std::runtime_error("column does not exist, did you forget to make_col?");
+  }
+
+  /*
+   * get_col(&model::primary_key_member)
+   */
+  template <typename val_t>
+  std::shared_ptr<any_col_of_t<obj_t>> get_col(primary_key_t<val_t> (obj_t::*p2m)) const {
+    using pri_t = const primary_col_t<obj_t, val_t>*;
+    for (const auto &col: cols) {
+      if (pri_t cast = dynamic_cast<pri_t>(&*col)) {
+        if (cast->p2m == p2m) {
+          return col;
+        }
+      }
+    }
+    throw std::runtime_error("column does not exist, did you forget to make_col?");
+  }
+
+  /*
+   * get_col(&model::foreign_key_member)
+   */
+  template <typename target_val_t, typename target_obj_t>
+  std::shared_ptr<any_col_of_t<obj_t>> get_col(foreign_key_t<target_obj_t, target_val_t> (obj_t::*p2m)) const {
+    using for_t = const foreign_col_t<obj_t, target_val_t, target_obj_t>*;
+    for (const auto &col: cols) {
+      if (for_t advanced_col = dynamic_cast<for_t>(&*col)) {
+        if (advanced_col->p2m == p2m) {
+          return col;
+        }
+      }
+    }
+    throw std::runtime_error("column does not exist, did you forget to make_col?");
+  }
+
+  /*
+   * get_col(std::string)
+   */
   std::shared_ptr<any_col_of_t<obj_t>> get_col(const std::string &col_name) const {
     for (const auto &col: cols) {
       if (col->name == col_name) {
@@ -556,7 +613,7 @@ public:
       }
     }
 
-    return nullptr;
+    throw std::runtime_error("column does not exist, did you forget to make_col?");
   }
 
   std::vector<std::shared_ptr<any_col_of_t<obj_t>>> get_cols() const {
@@ -580,16 +637,162 @@ public:
     return static_cast<const obj_t*>(this)->id;
   }
 
-  // todo
-  dj::json_t to_json() {
-    auto result = dj::json_t::empty_object;
+  template <typename val_t>
+  void set_primary_key(const val_t &val) {
+    static_cast<obj_t*>(this)->id = val;
+  }
 
-    for (const auto &col: obj_t::table.get_cols()) {
-      col->write(static_cast<obj_t*>(this), result);
+  /*
+   * set(&model_t::property, val_t)
+   */
+  template <typename val_t>
+  void set(val_t (obj_t::*p2m), const val_t &val) {
+    auto self = static_cast<obj_t*>(this);
+    if (self->*p2m != val) {
+      auto col = obj_t::table.get_col(p2m);
+      dirty_attributes.push_back(col);
+      self->*p2m = val;
+    }
+  }
+
+  template <typename val_t, typename target_t>
+  void set(foreign_key_t<target_t, val_t> (obj_t::*p2m), const val_t &val) {
+    auto self = static_cast<obj_t*>(this);
+    if (self->*p2m != val) {
+      auto col = obj_t::table.get_col(p2m);
+      dirty_attributes.push_back(col);
+      self->*p2m = val;
+    }
+  }
+
+  template <typename val_t>
+  void set(primary_key_t<val_t> (obj_t::*p2m), const val_t &val) = delete;
+
+  /*
+   * is_dirty()
+   */
+  bool is_dirty() {
+    return dirty_attributes.size() > 0;
+  }
+
+  /*
+   * get_dirty_attributes()
+   */
+  std::vector<std::string> get_dirty_attributes() {
+    std::vector<std::string> attrs;
+    for (const auto &col: dirty_attributes) {
+      attrs.push_back(col->name);
+    }
+    return attrs;
+  }
+
+  /*
+   * save()
+   */
+  void save(std::shared_ptr<pqxx::connection> c = hoc::db::anonymous_connection()) {
+    pqxx::work w(*c);
+    save(w, true);
+  }
+
+  void save(pqxx::work &w) {
+    save(w, false); // do not commit immediately if user supplied transaction object
+  }
+
+  void save(pqxx::work &w, bool commit_now) {
+    if (is_dirty()) {
+      std::stringstream ss;
+      ss << "update " << obj_t::table.name << " set ";
+
+      bool first = true;
+      for (const auto &col: dirty_attributes) {
+        if (!first) {
+          ss << ", ";
+        }
+        std::stringstream ss_name;
+        col->write(static_cast<obj_t*>(this), ss_name);
+        ss << w.quote_name(col->name) << " = " << w.quote(ss_name);
+        first = false;
+      }
+
+      std::stringstream ss_primary_val;
+      ss_primary_val << get_primary_key();
+      ss << " where " << w.quote_name(obj_t::table.get_primary_col_name()) << " = ";
+      ss << w.quote(ss_primary_val);
+      w.exec(ss);
+
+      if (commit_now) {
+        w.commit();
+      }
+
+      dirty_attributes.clear();
+    }
+  }
+
+  /*
+   * reload();
+   */
+  void reload(std::shared_ptr<pqxx::connection> c = hoc::db::anonymous_connection()) {
+    pqxx::work w(*c);
+    reload(w);
+  }
+
+  void reload(pqxx::work &w) {
+    reload(w, get_primary_key());
+  }
+
+  template <typename primary_val_t>
+  void reload(pqxx::work &w, const primary_key_t<primary_val_t> &) {
+    std::stringstream ss_primary_val;
+    ss_primary_val << get_primary_key();
+    std::stringstream ss;
+    ss << "select * from " << obj_t::table.name << " where "
+       << w.quote_name(obj_t::table.get_primary_col_name()) << " = "
+       << w.quote(ss_primary_val);
+    auto res = w.exec(ss);
+    if (res.size() != 1) {
+      ss << " returned " << res.size() << " rows";
+      throw std::runtime_error(ss.str());
     }
 
+    factory_t<obj_t, primary_val_t>::get()->require(res[0]);
+  }
+
+  /*
+   * to_json()
+   */
+  dj::json_t to_json() {
+    auto result = dj::json_t::empty_object;
+    obj_t::table.write(static_cast<obj_t*>(this), result);
     return result;
   }
+
+  /*
+   * find()
+   */
+  template <typename primary_val_t>
+  static std::shared_ptr<obj_t> find(
+    const primary_val_t &val,
+    std::shared_ptr<pqxx::connection> c = hoc::db::anonymous_connection()
+  ) {
+    auto result = factory_t<obj_t, primary_val_t>::get()->require(val);
+    pqxx::work w(*c);
+    result->reload(w);
+    return result;
+  }
+
+  template <typename primary_val_t>
+  static std::shared_ptr<obj_t> find(
+    const primary_val_t &val,
+    pqxx::work &w
+  ) {
+    auto result = factory_t<obj_t, primary_val_t>::get()->require(val);
+    result->reload(w);
+    return result;
+  }
+
+private:
+
+  std::vector<std::shared_ptr<any_col_of_t<obj_t>>> dirty_attributes;
 
 };
 
