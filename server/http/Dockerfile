@@ -21,6 +21,14 @@ RUN git clone https://aur.archlinux.org/libvmime.git /opt/libvmime
 RUN sudo mkdir /opt/aws-sdk-cpp && sudo chown developer /opt/aws-sdk-cpp
 RUN git clone --branch 1.0.127 https://github.com/aws/aws-sdk-cpp.git /opt/aws-sdk-cpp
 
+# download nlohmann json
+RUN sudo mkdir /opt/json && sudo chown developer /opt/json
+RUN git clone --branch v2.1.1 https://github.com/nlohmann/json.git /opt/json
+
+# build nlohmann json
+RUN mkdir /opt/json/build && cd /opt/json/build && cmake ..
+RUN cd /opt/json/build && make -j$(grep -c ^processor /proc/cpuinfo) && sudo make install
+
 # build vmime
 RUN cd /opt/libvmime && makepkg --noconfirm -s
 RUN sudo pacman --noconfirm -U /opt/libvmime/*.pkg.tar.xz

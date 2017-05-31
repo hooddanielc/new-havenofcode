@@ -12,6 +12,12 @@
 #include <utility>
 #include <vector>
 
+#include <nlohmann/json.hpp>
+
+namespace hoc {
+  using json = nlohmann::json;
+}
+
 namespace dj {
 
   /* A sum of the value types allowable in JSON. */

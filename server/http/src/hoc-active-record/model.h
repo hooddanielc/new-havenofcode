@@ -182,7 +182,7 @@ public:
 
   virtual void write(const obj_t *obj, std::ostream &strm) const = 0;
 
-  virtual void write(const obj_t *obj, dj::json_t &json) const = 0;
+  virtual void write(const obj_t *obj, json &json) const = 0;
 
   virtual void assign(obj_t *obj, const pqxx::result::field &field) const = 0;
 
@@ -222,8 +222,8 @@ public:
     strm << (obj->*p2m);
   }
 
-  virtual void write(const obj_t *obj, dj::json_t &json) const override {
-    json[any_col_t::name] = obj->*p2m;
+  virtual void write(const obj_t *obj, json &json) const override {
+    json[any_col_t::name] = (obj->*p2m);
   }
 
   virtual void assign(obj_t *obj, const pqxx::result::field &field) const override {
@@ -262,7 +262,7 @@ public:
     strm << (obj->*p2m);
   }
 
-  virtual void write(const obj_t *obj, dj::json_t &json) const override {
+  virtual void write(const obj_t *obj, json &json) const override {
     json[any_col_t::name] = (obj->*p2m).get();
   }
 
@@ -304,7 +304,7 @@ public:
     strm << (obj->*p2m);
   }
 
-  virtual void write(const obj_t *obj, dj::json_t &json) const override {
+  virtual void write(const obj_t *obj, json &json) const override {
     json[any_col_t::name] = (obj->*p2m).get();
   }
 
@@ -372,14 +372,14 @@ public:
     }
   }
 
-  virtual void write(const obj_t *obj, dj::json_t &json) const override {
-    dj::json_t::array_t array;
+  virtual void write(const obj_t *obj, json &json_obj) const override {
+    json array;
 
     for (const auto &item: (obj->*p2m)) {
       array.emplace_back(item);
     }
 
-    json[any_col_t::name] = array;
+    json_obj[any_col_t::name] = array;
   }
 
   virtual void assign(obj_t *, const pqxx::result::field &) const override {
@@ -494,7 +494,7 @@ public:
     strm << std::endl;
   }
 
-  void write(const obj_t *obj, dj::json_t &json) const {
+  void write(const obj_t *obj, json &json) const {
     for (const auto &col: cols) {
       col->write(obj, json);
     }
@@ -760,8 +760,8 @@ public:
   /*
    * to_json()
    */
-  dj::json_t to_json() {
-    auto result = dj::json_t::empty_object;
+  json to_json() {
+    json result;
     obj_t::table.write(static_cast<obj_t*>(this), result);
     return result;
   }
