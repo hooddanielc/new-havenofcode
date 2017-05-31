@@ -397,17 +397,58 @@ void destroy_db() {
     w.exec(drop_tables);
     w.commit();
   });
+
+  factory_t<model_a_t, std::string>::get()->reset();
+  factory_t<model_z_t, int>::get()->reset();
+}
+
+FIXTURE(find_single_model) {
+  setup_db();
+
+  EXPECT_OK([]() {
+    // create rows
+    auto c = hoc::db::super_user_connection();
+    pqxx::work w(*c);
+    w.exec("insert into model_z_t (id, age) values (10, 23)");
+    w.exec("insert into model_z_t (id, age) values (20, 21)");
+    w.exec(
+      "insert into model_a_t (id, opacity, age, huge_num, \"foreign\") values "
+      "('00000000-0000-0000-0000-000000000001', 0.1, 3, 6444, 10);"
+    );
+    w.exec(
+      "insert into model_a_t (id, opacity, age, huge_num, \"foreign\") values "
+      "('00000000-0000-0000-0000-000000000002', 0.2, 6, 6444, 10);"
+    );
+    w.exec(
+      "insert into model_a_t (id, opacity, age, huge_num, \"foreign\") values "
+      "('00000000-0000-0000-0000-000000000003', 0.4, 12, 6444, 10);"
+    );
+    w.commit();
+
+    // find
+    auto model_z_1 = model_z_t::find(10, c);
+    auto model_z_2 = model_z_t::find(20, c);
+    auto model_a_1 = model_a_t::find("00000000-0000-0000-0000-000000000001", c);
+    auto model_a_2 = model_a_t::find("00000000-0000-0000-0000-000000000002", c);
+    auto model_a_3 = model_a_t::find("00000000-0000-0000-0000-000000000003", c);
+
+    EXPECT_TRUE(model_z_1->id == 10);
+    EXPECT_TRUE(model_z_1->age == 23);
+    EXPECT_TRUE(model_z_2->id == 20);
+    EXPECT_TRUE(model_z_2->age == 21);
+
+    EXPECT_TRUE(model_a_1->id == "00000000-0000-0000-0000-000000000001");
+    EXPECT_TRUE(model_a_2->id == "00000000-0000-0000-0000-000000000002");
+    EXPECT_TRUE(model_a_3->id == "00000000-0000-0000-0000-000000000003");
+  });
+
+  destroy_db();
 }
 
 FIXTURE(look_at_session_stuff) {
   setup_db();
 
   EXPECT_OK([]() {
-
-    auto my_own = model_z_t::find(1, hoc::db::super_user_connection());
-
-    std::cout << my_own->to_json() << std::endl;
-
     auto c = hoc::db::super_user_connection();
     pqxx::work w(*c);
     auto res = w.exec(
@@ -422,11 +463,10 @@ FIXTURE(look_at_session_stuff) {
       auto record = factory_t<model_a_t, std::string>::get()->require(res[i]);
       //model_a_t::table.write(&*record, std::cout);
       vec1.push_back(record);
-
-      record->set(&model_a_t::opacity, 0.1);
-      record->set(&model_a_t::age, 19);
-      record->set(&model_a_t::foreign, 2);
-      record->save(hoc::db::super_user_connection());
+      //record->set(&model_a_t::opacity, 0.1);
+      //record->set(&model_a_t::age, 19);
+      //record->set(&model_a_t::foreign, 2);
+      //record->save(hoc::db::super_user_connection());
 
       // EXPECT_TRUE(record->id == res[i].at("id").as<std::string>());
       // EXPECT_TRUE(record->opacity == 0.1);
@@ -439,8 +479,8 @@ FIXTURE(look_at_session_stuff) {
     w.commit();
 
     for (const auto &item: vec1) {
-      item->reload(hoc::db::super_user_connection());
-      std::cout << item->to_json() << std::endl;
+      item->reload(c);
+      // std::cout << item->to_json() << std::endl;
 
       // EXPECT_TRUE(record->id == res[i].at("id").as<std::string>());
       // EXPECT_TRUE(record->opacity == 0.1);
@@ -448,8 +488,6 @@ FIXTURE(look_at_session_stuff) {
       // EXPECT_TRUE(record->huge_num == 6444);
       // EXPECT_TRUE(record->foreign == 1 || record->foreign == 2 || record->foreign == 3);
     }
-
-    std::cout << my_own->to_json() << std::endl;
 
     // now select only model_z_t
     // auto res2 = w.exec("select * from model_z_t");

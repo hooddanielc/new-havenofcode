@@ -42,6 +42,24 @@ public:
     return shared_ptr;
   }
 
+  std::shared_ptr<obj_t> require(const json &json) {
+    auto name = obj_t::table.get_primary_col_name();
+    if (json[name].is_null()) {
+      throw std::runtime_error("json object does not contain primary key " + name);
+    }
+
+    val_t id = json[name].template get<val_t>();
+    auto result = require(id);
+
+    for (const auto &col: obj_t::table.get_cols()) {
+      if (!json[col->name].is_null()) {
+       col->read(&*result, json[col->name]);
+      }
+    }
+
+    return result;
+  }
+
   std::shared_ptr<obj_t> require(const pqxx::tuple &res) {
     read_table();
     std::shared_ptr<obj_t> result;
@@ -49,9 +67,10 @@ public:
     for (int i = 0; i < int(res.size()); ++i) {
       if (
         int(res[i].table()) == postgres_oid &&
-        column_order[res[i].table_column()] == obj_t::table.get_primary_col_name()
+        column_order[res[i].table_column()] == std::string(obj_t::table.get_primary_col_name())
       ) {
         result = require(res[i].as<val_t>());
+        break;
       }
     }
 
@@ -62,12 +81,22 @@ public:
     for (int i = 0; i < int(res.size()); ++i) {
       if (int(res[i].table()) == postgres_oid) {
         if (auto col = obj_t::table.get_col(column_order[res[i].table_column()])) {
-          col->assign(&*result, res[i]);
+          col->read(&*result, res[i]);
         }
       }
     }
 
     return result;
+  }
+
+  void clear() {
+    weak_ptrs.clear();
+  }
+
+  void reset() {
+    clear();
+    postgres_oid = 0;
+    column_order.clear();
   }
 
   static factory_t *get() {
@@ -184,7 +213,9 @@ public:
 
   virtual void write(const obj_t *obj, json &json) const = 0;
 
-  virtual void assign(obj_t *obj, const pqxx::result::field &field) const = 0;
+  virtual void read(obj_t *obj, const pqxx::result::field &field) const = 0;
+
+  virtual void read(obj_t *obj, const json &asdf) const = 0;
 
   virtual bool is_primary_key() const {
     return false;
@@ -226,8 +257,12 @@ public:
     json[any_col_t::name] = (obj->*p2m);
   }
 
-  virtual void assign(obj_t *obj, const pqxx::result::field &field) const override {
-    obj->*p2m = field.as<val_t>();
+  virtual void read(obj_t *obj, const pqxx::result::field &field) const override {
+    (obj->*p2m) = field.as<val_t>();
+  }
+
+  virtual void read(obj_t *obj, const json &json) const override {
+    (obj->*p2m) = json.get<val_t>();
   }
 
   virtual bool is_primary_key() const override {
@@ -266,8 +301,12 @@ public:
     json[any_col_t::name] = (obj->*p2m).get();
   }
 
-  virtual void assign(obj_t *obj, const pqxx::result::field &field) const override {
-    obj->*p2m = field.as<val_t>();
+  virtual void read(obj_t *obj, const pqxx::result::field &field) const override {
+    (obj->*p2m) = field.as<val_t>();
+  }
+
+  virtual void read(obj_t *obj, const json &json) const override {
+    (obj->*p2m) = json.get<val_t>();
   }
 
   virtual bool is_primary_key() const override {
@@ -308,8 +347,13 @@ public:
     json[any_col_t::name] = (obj->*p2m).get();
   }
 
-  virtual void assign(obj_t *obj, const pqxx::result::field &field) const override {
-    obj->*p2m = field.as<val_t>();
+  virtual void read(obj_t *obj, const pqxx::result::field &field) const override {
+    (obj->*p2m) = field.as<val_t>();
+    add_has_many_record(obj->get_primary_key(), obj);
+  }
+
+  virtual void read(obj_t *obj, const json &json) const override {
+    (obj->*p2m) = json.get<val_t>();
     add_has_many_record(obj->get_primary_key(), obj);
   }
 
@@ -346,7 +390,7 @@ private:
     }
   }
 
-};  // foreign_col_t<obj_t, val_t, target_obj_t, target_val_t>
+};  // foreign_col_t<obj_t, val_t, target_obj_t>
 
 template <typename obj_t, typename val_t, typename target_obj_t, typename target_val_t>
 class has_many_col_t final: public any_col_of_t<obj_t> {
@@ -382,9 +426,9 @@ public:
     json_obj[any_col_t::name] = array;
   }
 
-  virtual void assign(obj_t *, const pqxx::result::field &) const override {
-    throw std::runtime_error("cannot assign has_many_col_t using pqxx::result::field");
-  }
+  virtual void read(obj_t *, const pqxx::result::field &) const override {}
+
+  virtual void read(obj_t *, const json &) const override {}
 
   virtual bool is_primary_key() const override {
     return false;
@@ -774,18 +818,20 @@ public:
     const primary_val_t &val,
     std::shared_ptr<pqxx::connection> c = hoc::db::anonymous_connection()
   ) {
-    auto result = factory_t<obj_t, primary_val_t>::get()->require(val);
     pqxx::work w(*c);
-    result->reload(w);
-    return result;
+    return find(val, w);
   }
 
+  /*
+   * find()
+   */
   template <typename primary_val_t>
   static std::shared_ptr<obj_t> find(
     const primary_val_t &val,
     pqxx::work &w
   ) {
-    auto result = factory_t<obj_t, primary_val_t>::get()->require(val);
+    using primary_t = decltype(std::declval<obj_t>().get_primary_key().get());
+    auto result = factory_t<obj_t, primary_t>::get()->require(static_cast<primary_t>(val));
     result->reload(w);
     return result;
   }
