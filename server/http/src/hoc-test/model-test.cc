@@ -396,18 +396,47 @@ void destroy_db() {
     pqxx::work w(*c);
     w.exec(drop_tables);
     w.commit();
+    store_t::get()->reset();
   });
 
-  factory_t<model_a_t, std::string>::get()->reset();
-  factory_t<model_z_t, int>::get()->reset();
 }
 
-FIXTURE(find_single_model) {
+FIXTURE(store) {
+  setup_db();
+
+  EXPECT_OK([]() {
+    auto a = factory_t<model_a_t, std::string>::get();
+    auto z = factory_t<model_z_t, int>::get();
+
+    a->reset();
+    z->reset();
+
+    EXPECT_EQ(size_t(0), a->size());
+    EXPECT_EQ(size_t(0), z->size());
+
+    auto c = hoc::db::super_user_connection();
+    pqxx::work w(*c);
+    auto res_a = w.exec("select * from model_a_t limit 1");
+    factory_t<model_a_t, std::string>::get()->require(res_a[0]);
+    auto res_z = w.exec("select * from model_z_t limit 1");
+    factory_t<model_z_t, int>::get()->require(res_z[0]);
+    EXPECT_EQ(size_t(1), a->size());
+    EXPECT_EQ(size_t(1), z->size());
+    store_t::get()->reset();
+    EXPECT_EQ(size_t(0), a->size());
+    EXPECT_EQ(size_t(0), z->size());
+  });
+
+  destroy_db();
+}
+
+FIXTURE(find_model) {
   setup_db();
 
   EXPECT_OK([]() {
     // create rows
     auto c = hoc::db::super_user_connection();
+    store_t::get()->set_connection(c);
     pqxx::work w(*c);
     w.exec("insert into model_z_t (id, age) values (10, 23)");
     w.exec("insert into model_z_t (id, age) values (20, 21)");
@@ -426,11 +455,11 @@ FIXTURE(find_single_model) {
     w.commit();
 
     // find
-    auto model_z_1 = model_z_t::find(10, c);
-    auto model_z_2 = model_z_t::find(20, c);
-    auto model_a_1 = model_a_t::find("00000000-0000-0000-0000-000000000001", c);
-    auto model_a_2 = model_a_t::find("00000000-0000-0000-0000-000000000002", c);
-    auto model_a_3 = model_a_t::find("00000000-0000-0000-0000-000000000003", c);
+    auto model_z_1 = model_z_t::find(10);
+    auto model_z_2 = model_z_t::find(20);
+    auto model_a_1 = model_a_t::find("00000000-0000-0000-0000-000000000001");
+    auto model_a_2 = model_a_t::find("00000000-0000-0000-0000-000000000002");
+    auto model_a_3 = model_a_t::find("00000000-0000-0000-0000-000000000003");
 
     EXPECT_TRUE(model_z_1->id == 10);
     EXPECT_TRUE(model_z_1->age == 23);
@@ -445,70 +474,94 @@ FIXTURE(find_single_model) {
   destroy_db();
 }
 
-FIXTURE(look_at_session_stuff) {
+FIXTURE(save_model) {
   setup_db();
 
   EXPECT_OK([]() {
+    // create rows
     auto c = hoc::db::super_user_connection();
+    store_t::get()->set_connection(c);
     pqxx::work w(*c);
-    auto res = w.exec(
-      "select * from model_a_t "
-      "inner join model_z_t on model_z_t.id = model_a_t.foreign"
+    w.exec("insert into model_z_t (id, age) values (10, 23)");
+    w.exec(
+      "insert into model_a_t (id, opacity, age, huge_num, \"foreign\") values "
+      "('00000000-0000-0000-0000-000000000001', 0.1, 3, 6444, 10);"
     );
-
-    std::vector<std::shared_ptr<model_a_t>> vec1;
-    std::vector<std::shared_ptr<model_z_t>> vec2;
-
-    for (int i = 0; i < int(res.size()); ++i) {
-      auto record = factory_t<model_a_t, std::string>::get()->require(res[i]);
-      //model_a_t::table.write(&*record, std::cout);
-      vec1.push_back(record);
-      //record->set(&model_a_t::opacity, 0.1);
-      //record->set(&model_a_t::age, 19);
-      //record->set(&model_a_t::foreign, 2);
-      //record->save(hoc::db::super_user_connection());
-
-      // EXPECT_TRUE(record->id == res[i].at("id").as<std::string>());
-      // EXPECT_TRUE(record->opacity == 0.1);
-      // EXPECT_TRUE(record->age == 3);
-      // EXPECT_TRUE(record->huge_num == 6444);
-      // EXPECT_TRUE(record->foreign == 1 || record->foreign == 2 || record->foreign == 3);
-    }
-
-    w.exec("update model_a_t set age = '30' where id is not null");
     w.commit();
 
-    for (const auto &item: vec1) {
-      item->reload(c);
-      // std::cout << item->to_json() << std::endl;
+    // find
+    auto z = model_z_t::find(10);
+    auto a = model_a_t::find("00000000-0000-0000-0000-000000000001");
 
-      // EXPECT_TRUE(record->id == res[i].at("id").as<std::string>());
-      // EXPECT_TRUE(record->opacity == 0.1);
-      // EXPECT_TRUE(record->age == 3);
-      // EXPECT_TRUE(record->huge_num == 6444);
-      // EXPECT_TRUE(record->foreign == 1 || record->foreign == 2 || record->foreign == 3);
-    }
+    EXPECT_TRUE(z->age == 23);
+    EXPECT_TRUE(a->opacity == 0.1);
+    z->set(&model_z_t::age, 50);
+    a->set(&model_a_t::opacity, 0.2);
+    z->save();
+    a->save();
+    EXPECT_TRUE(z->age == 50);
+    EXPECT_TRUE(a->opacity == 0.2);
+    store_t::get()->reset();
+    store_t::get()->set_connection(c);
+    auto z_again = model_z_t::find(10);
+    auto a_again = model_a_t::find("00000000-0000-0000-0000-000000000001");
+    EXPECT_TRUE(z_again->age == 50);
+    EXPECT_TRUE(a_again->opacity == 0.2);
+  });
 
-    // now select only model_z_t
-    // auto res2 = w.exec("select * from model_z_t");
-    // for (int i = 0; i < int(res2.size()); ++i) {
-    //   auto record = factory_t<model_z_t, int>::get()->require(res2[i]);
-    //   vec2.push_back(record);
-    //   model_z_t::table.write(&*record, std::cout);
-    //   std::cout << record->to_json() << std::endl;
-    // }
+  destroy_db();
+}
 
-    // auto res3 = w.exec("select * from model_z_t");
-    // for (int i = 0; i < int(res3.size()); ++i) {
-    //   auto record = factory_t<model_z_t, int>::get()->require(res3[i]);
-    //   model_z_t::table.write(&*record, std::cout);
-    //   std::cout << record->to_json() << std::endl;
-    //   std::cout << record->is_dirty() << std::endl;
-    //   record->set(&model_z_t::age, 19);
-    //   std::cout << record->is_dirty() << std::endl;
-    //   std::cout << record->to_json() << std::endl;
-    //   record->save();
-    // }
+FIXTURE(to_json) {
+  setup_db();
+
+  EXPECT_OK([]() {
+    // create rows
+    auto c = hoc::db::super_user_connection();
+    pqxx::work w(*c);
+    w.exec("insert into model_z_t (id, age) values (10, 23)");
+    w.exec(
+      "insert into model_a_t (id, opacity, age, huge_num, \"foreign\") values "
+      "('00000000-0000-0000-0000-000000000001', 0.1, 3, 6444, 10);"
+    );
+    w.commit();
+    store_t::get()->set_connection(c);
+    auto record = model_a_t::find("00000000-0000-0000-0000-000000000001");
+
+    json expected = {
+      { "age", 3 },
+      { "foreign", 10 },
+      { "huge_num", 6444 },
+      { "id", "00000000-0000-0000-0000-000000000001" },
+      { "opacity", 0.1 }
+    };
+
+    EXPECT_EQ(expected, record->to_json());
+  });
+
+  destroy_db();
+}
+
+FIXTURE(reload) {
+  setup_db();
+
+  EXPECT_OK([]() {
+    // create rows
+    auto c = hoc::db::super_user_connection();
+    store_t::get()->set_connection(c);
+    pqxx::work w(*c);
+    w.exec("insert into model_z_t (id, age) values (10, 23)");
+    w.exec(
+      "insert into model_a_t (id, opacity, age, huge_num, \"foreign\") values "
+      "('00000000-0000-0000-0000-000000000001', 0.1, 3, 6444, 10);"
+    );
+    w.commit();
+    auto record = model_a_t::find("00000000-0000-0000-0000-000000000001");
+    record->set(&model_a_t::opacity, 0.3);
+    EXPECT_EQ(record->is_dirty(), true);
+    EXPECT_EQ(record->opacity, 0.3);
+    record->reload();
+    EXPECT_EQ(record->opacity, 0.1);
   });
 
   destroy_db();

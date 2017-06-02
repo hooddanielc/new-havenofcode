@@ -12,8 +12,78 @@
 
 namespace hoc {
 
+class any_factory_t {
+  public:
+
+    virtual void reset() = 0;
+
+    virtual void clear() = 0;
+
+    void add_to_store(const std::string &factory);
+
+};
+
+class store_t final {
+  public:
+    friend class any_factory_t;
+
+    static store_t *get() {
+      static store_t store;
+      return &store;
+    }
+
+    void reset() {
+      for (const auto &iter: factories) {
+        iter.second->reset();
+      }
+
+      if (!connection.expired()) {
+        connection.reset();
+      }
+    }
+
+    void clear() {
+      for (const auto &iter: factories) {
+        iter.second->clear();
+      }
+    }
+
+    std::shared_ptr<pqxx::connection> get_connection() {
+      if (connection.expired()) {
+        auto con = hoc::db::anonymous_connection();
+        connection = con;
+        return con;
+      }
+
+      return connection.lock();
+    }
+
+    void set_connection(std::shared_ptr<pqxx::connection> connection_) {
+      connection = connection_;
+    }
+
+  private:
+
+    void add_factory(std::string name, any_factory_t *factory) {
+      factories[name] = factory;
+    }
+
+    std::weak_ptr<pqxx::connection> connection;
+
+    std::unordered_map<std::string, any_factory_t*> factories;
+
+    store_t() = default;
+
+    ~store_t() = default;
+
+};
+
+void any_factory_t::add_to_store(const std::string &name) {
+  store_t::get()->add_factory(name, this);
+}
+
 template <typename obj_t, typename val_t>
-class factory_t final {
+class factory_t final: public any_factory_t {
 public:
 
   std::shared_ptr<obj_t> require(const val_t &val) {
@@ -89,11 +159,11 @@ public:
     return result;
   }
 
-  void clear() {
+  virtual void clear() override {
     weak_ptrs.clear();
   }
 
-  void reset() {
+  virtual void reset() override {
     clear();
     postgres_oid = 0;
     column_order.clear();
@@ -104,9 +174,15 @@ public:
     return &factory;
   }
 
+  size_t size() {
+    return weak_ptrs.size();
+  }
+
 private:
 
-  factory_t() : postgres_oid(0) {}
+  factory_t() : postgres_oid(0) {
+    add_to_store(obj_t::table.name);
+  }
 
   ~factory_t() = default;
 
@@ -733,7 +809,7 @@ public:
   /*
    * save()
    */
-  void save(std::shared_ptr<pqxx::connection> c = hoc::db::anonymous_connection()) {
+  void save(std::shared_ptr<pqxx::connection> c = store_t::get()->get_connection()) {
     pqxx::work w(*c);
     save(w, true);
   }
@@ -775,7 +851,7 @@ public:
   /*
    * reload();
    */
-  void reload(std::shared_ptr<pqxx::connection> c = hoc::db::anonymous_connection()) {
+  void reload(std::shared_ptr<pqxx::connection> c = store_t::get()->get_connection()) {
     pqxx::work w(*c);
     reload(w);
   }
@@ -816,7 +892,7 @@ public:
   template <typename primary_val_t>
   static std::shared_ptr<obj_t> find(
     const primary_val_t &val,
-    std::shared_ptr<pqxx::connection> c = hoc::db::anonymous_connection()
+    std::shared_ptr<pqxx::connection> c = store_t::get()->get_connection()
   ) {
     pqxx::work w(*c);
     return find(val, w);
