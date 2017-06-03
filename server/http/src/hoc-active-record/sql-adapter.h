@@ -4,12 +4,14 @@
 #include <vector>
 #include <tuple>
 #include <memory>
+#include <hoc-active-record/model.h>
 
 namespace hoc {
 
 template <typename obj_t, typename val_t>
 class sql_adapter_t {
 public:
+  using array_t = std::vector<std::shared_ptr<obj_t>>;
   const primary_key_t<val_t> (obj_t::*p2m);
 
   sql_adapter_t(primary_key_t<val_t> (obj_t::*p2m_)) :
@@ -54,7 +56,8 @@ public:
    * find_by(key, value)
    * ============================================= */
   sql_adapter_t &find_by(const std::string &key, const std::string &val) {
-    find_by_toks[key] = str(val);
+    auto c = store_t::get()->get_connection();
+    find_by_toks[key] = c->quote(str(val));
     return *this;
   }
 
@@ -63,10 +66,11 @@ public:
     other_val_t (other_obj_t::*p2m),
     const std::string &val
   ) {
+    auto c = store_t::get()->get_connection();
     auto name = other_obj_t::table.get_col_name(p2m);
     std::stringstream ss_name;
-    ss_name << other_obj_t::table.name << "." << name;
-    find_by_toks[ss_name.str()] = val;
+    ss_name << c->quote_name(other_obj_t::table.name) << "." << c->quote_name(name);
+    find_by_toks[ss_name.str()] = c->quote(val);
     return *this;
   }
 
@@ -161,7 +165,8 @@ public:
   /*
    * to_sql();
    * ======================= */
-  std::string to_sql() {
+  std::string to_sql(std::shared_ptr<pqxx::connection> c = store_t::get()->get_connection()) {
+    pqxx::work w(*c);
     std::stringstream ss;
     ss << "select ";
 
@@ -169,12 +174,12 @@ public:
       ss << "distinct ";
     }
 
-    ss << obj_t::table.name << ".* from " << obj_t::table.name << " ";
+    ss << "* from " << c->quote_name(obj_t::table.name) << " ";
 
     // eval joins
     for (const auto &join : join_toks) {
       ss << std::get<0>(join) << " " << std::get<1>(join) << " on "
-         << std::get<2>(join) << " " << std::get<3>(join) << " ";
+         << std::get<2>(join) << " = " << std::get<3>(join) << " ";
     }
 
     bool needs_where = find_toks.size() ||
@@ -188,8 +193,8 @@ public:
       if (find_toks.size()) {
         ss << " (";
         for (auto it = find_toks.begin(); it != find_toks.end(); ++it) {
-          ss << obj_t::table.name << "." << obj_t::table.get_primary_col_name() << " = ";
-          ss << *it;
+          ss << c->quote_name(obj_t::table.name) << "." << c->quote_name(obj_t::table.get_primary_col_name()) << " = ";
+          ss << c->quote(*it);
           if (std::next(it) != find_toks.end()) {
             ss << " or ";
           }
@@ -239,6 +244,18 @@ public:
     return ss.str();
   }
 
+  /*
+   * array_t operator=()
+   *
+   * queries the database and uses factories to return an
+   * array of records
+   */
+  operator array_t () {
+    // todo
+    array_t result;
+    return result;
+  }
+
 private:
   bool is_distinct;
   int limit_rows;
@@ -259,16 +276,17 @@ private:
   sql_adapter_t &add_join(
     foreign_key_t<obj_t, val_t> (target_obj_t::*p2m)
   ) {
+    auto c = store_t::get()->get_connection();
     std::stringstream ss_left;
-    ss_left << obj_t::table.name << "." << obj_t::table.get_primary_col_name();
+    ss_left << c->quote_name(obj_t::table.name) << "." << c->quote_name(obj_t::table.get_primary_col_name());
     auto target_col_name = target_obj_t::table.get_col_name(p2m);
     auto target_table_name = target_obj_t::table.name;
     std::stringstream ss_right;
-    ss_right << target_table_name << "." << target_col_name;
+    ss_right << c->quote_name(target_table_name) << "." << c->quote_name(target_col_name);
     auto right_col = target_obj_t::table.get_col_name(p2m);
     join_toks.push_back(std::make_tuple(
       "inner join",
-      target_obj_t::table.name,
+      c->quote_name(target_obj_t::table.name),
       ss_left.str(),
       ss_right.str()
     ));
@@ -290,12 +308,13 @@ private:
   sql_adapter_t add_join(
     foreign_key_t<other_obj_t, other_val_t> (target_obj_t::*p2m)
   ) {
+    auto c = store_t::get()->get_connection();
     std::stringstream ss_left;
-    ss_left << other_obj_t::table.name << "." << other_obj_t::table.get_primary_col_name();
+    ss_left << c->quote_name(other_obj_t::table.name) << "." << c->quote_name(other_obj_t::table.get_primary_col_name());
     auto target_col_name = target_obj_t::table.get_col_name(p2m);
     auto target_table_name = target_obj_t::table.name;
     std::stringstream ss_right;
-    ss_right << target_table_name << "." << target_col_name;
+    ss_right << c->quote_name(target_table_name) << "." << c->quote_name(target_col_name);
     auto right_col = target_obj_t::table.get_col_name(p2m);
 
     // check if referenced key is included in
@@ -309,7 +328,7 @@ private:
       if (res.size() > 0 && res[0] == std::get<1>(item)) {
         join_toks.push_back(std::make_tuple(
           "inner join",
-          target_obj_t::table.name,
+          c->quote_name(target_obj_t::table.name),
           left,
           ss_right.str()
         ));
@@ -317,7 +336,7 @@ private:
       }
     }
     std::stringstream ss;
-    ss << "must join primary key for " << target_obj_t::table.name << " first";
+    ss << "must join primary key for " << c->quote_name(target_obj_t::table.name) << " first";
     throw ss.str();
   }
 

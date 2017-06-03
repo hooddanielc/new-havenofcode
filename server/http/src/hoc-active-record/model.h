@@ -156,6 +156,7 @@ public:
       }
     }
 
+    result->changes_applied();
     return result;
   }
 
@@ -293,6 +294,8 @@ public:
 
   virtual void read(obj_t *obj, const json &asdf) const = 0;
 
+  virtual bool is_equal(obj_t *obj_a, obj_t *obj_b) const = 0;
+
   virtual bool is_primary_key() const {
     return false;
   }
@@ -341,6 +344,10 @@ public:
     (obj->*p2m) = json.get<val_t>();
   }
 
+  virtual bool is_equal(obj_t *obj_a, obj_t *obj_b) const override {
+    return (obj_a->*p2m) == (obj_b->*p2m);
+  }
+
   virtual bool is_primary_key() const override {
     return false;
   }
@@ -383,6 +390,10 @@ public:
 
   virtual void read(obj_t *obj, const json &json) const override {
     (obj->*p2m) = json.get<val_t>();
+  }
+
+  virtual bool is_equal(obj_t *obj_a, obj_t *obj_b) const override {
+    return (obj_a->*p2m).get() == (obj_b->*p2m).get();
   }
 
   virtual bool is_primary_key() const override {
@@ -431,6 +442,10 @@ public:
   virtual void read(obj_t *obj, const json &json) const override {
     (obj->*p2m) = json.get<val_t>();
     add_has_many_record(obj->get_primary_key(), obj);
+  }
+
+  virtual bool is_equal(obj_t *obj_a, obj_t *obj_b) const override {
+    return (obj_a->*p2m).get() == (obj_b->*p2m).get();
   }
 
   virtual bool is_primary_key() const override {
@@ -505,6 +520,10 @@ public:
   virtual void read(obj_t *, const pqxx::result::field &) const override {}
 
   virtual void read(obj_t *, const json &) const override {}
+
+  virtual bool is_equal(obj_t *, obj_t *) const override {
+    return true;
+  }
 
   virtual bool is_primary_key() const override {
     return false;
@@ -752,7 +771,13 @@ private:
 template <typename obj_t>
 class model_t {
 public:
+  using array_t = std::vector<std::shared_ptr<obj_t>>;
 
+  /*
+   * get_primary_key()
+   *
+   * returns primary key
+   */
   auto get_primary_key() const {
     return static_cast<const obj_t*>(this)->id;
   }
@@ -767,22 +792,12 @@ public:
    */
   template <typename val_t>
   void set(val_t (obj_t::*p2m), const val_t &val) {
-    auto self = static_cast<obj_t*>(this);
-    if (self->*p2m != val) {
-      auto col = obj_t::table.get_col(p2m);
-      dirty_attributes.push_back(col);
-      self->*p2m = val;
-    }
+    static_cast<obj_t*>(this)->*p2m = val;
   }
 
   template <typename val_t, typename target_t>
   void set(foreign_key_t<target_t, val_t> (obj_t::*p2m), const val_t &val) {
-    auto self = static_cast<obj_t*>(this);
-    if (self->*p2m != val) {
-      auto col = obj_t::table.get_col(p2m);
-      dirty_attributes.push_back(col);
-      self->*p2m = val;
-    }
+    static_cast<obj_t*>(this)->*p2m = val;
   }
 
   template <typename val_t>
@@ -792,7 +807,22 @@ public:
    * is_dirty()
    */
   bool is_dirty() {
-    return dirty_attributes.size() > 0;
+    for (const auto &col: obj_t::table.get_cols()) {
+      if (!col->is_equal(static_cast<obj_t*>(original.get()), static_cast<obj_t*>(this))) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /*
+   * changes_applied()
+   *
+   * saves current changes as original state
+   */
+  void changes_applied() {
+    original = std::make_shared<obj_t>(*(static_cast<obj_t*>(this)));
   }
 
   /*
@@ -800,7 +830,7 @@ public:
    */
   std::vector<std::string> get_dirty_attributes() {
     std::vector<std::string> attrs;
-    for (const auto &col: dirty_attributes) {
+    for (const auto &col: get_dirty_cols()) {
       attrs.push_back(col->name);
     }
     return attrs;
@@ -824,7 +854,7 @@ public:
       ss << "update " << obj_t::table.name << " set ";
 
       bool first = true;
-      for (const auto &col: dirty_attributes) {
+      for (const auto &col: get_dirty_cols()) {
         if (!first) {
           ss << ", ";
         }
@@ -844,7 +874,7 @@ public:
         w.commit();
       }
 
-      dirty_attributes.clear();
+      changes_applied();
     }
   }
 
@@ -898,9 +928,6 @@ public:
     return find(val, w);
   }
 
-  /*
-   * find()
-   */
   template <typename primary_val_t>
   static std::shared_ptr<obj_t> find(
     const primary_val_t &val,
@@ -914,7 +941,17 @@ public:
 
 private:
 
-  std::vector<std::shared_ptr<any_col_of_t<obj_t>>> dirty_attributes;
+  std::shared_ptr<obj_t> original;
+
+  std::vector<std::shared_ptr<any_col_of_t<obj_t>>> get_dirty_cols() {
+    std::vector<std::shared_ptr<any_col_of_t<obj_t>>> result;
+    for (const auto &col: obj_t::table.get_cols()) {
+      if (!col->is_equal(static_cast<obj_t*>(original.get()), static_cast<obj_t*>(this))) {
+        result.push_back(col);
+      }
+    }
+    return result;
+  }
 
 };
 

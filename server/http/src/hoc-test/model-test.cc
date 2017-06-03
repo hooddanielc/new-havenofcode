@@ -116,60 +116,60 @@ const table_t<model_d_t> model_d_t::table = {
 
 FIXTURE(adapter_to_sql) {
   // find
-  auto subject_find_one = make_sql_adapter(&model_a_t::id).find("'one'");
+  auto subject_find_one = make_sql_adapter(&model_a_t::id).find("one");
   EXPECT_EQ(
     subject_find_one.to_sql(),
-    "select model_a_t.* from model_a_t where (model_a_t.id = 'one')"
+    "select * from \"model_a_t\" where (\"model_a_t\".\"id\" = 'one')"
   );
-  auto subject_find_two = make_sql_adapter(&model_a_t::id).find("'one'").find("'two'");
+  auto subject_find_two = make_sql_adapter(&model_a_t::id).find("one").find("two");
   EXPECT_EQ(
     subject_find_two.to_sql(),
-    "select model_a_t.* from model_a_t where (model_a_t.id = 'one' or model_a_t.id = 'two')"
+    "select * from \"model_a_t\" where (\"model_a_t\".\"id\" = 'one' or \"model_a_t\".\"id\" = 'two')"
   );
 
   // find_by
-  auto subject_find_by = make_sql_adapter(&model_a_t::id).find_by(&model_a_t::age, "'1'");
+  auto subject_find_by = make_sql_adapter(&model_a_t::id).find_by(&model_a_t::age, "1");
   EXPECT_EQ(
     subject_find_by.to_sql(),
-    "select model_a_t.* from model_a_t where model_a_t.age = '1'"
+    "select * from \"model_a_t\" where \"model_a_t\".\"age\" = '1'"
   );
 
   // distinct limit
   auto subject_limit_distinct = make_sql_adapter(&model_a_t::id).distinct().limit(10);
   EXPECT_EQ(
     subject_limit_distinct.to_sql(),
-    "select distinct model_a_t.* from model_a_t  limit 10"
+    "select distinct * from \"model_a_t\"  limit 10"
   );
 
   // limit offset
   auto subject_limit_offset = make_sql_adapter(&model_a_t::id).distinct().limit(10).offset(10);
   EXPECT_EQ(
     subject_limit_offset.to_sql(),
-    "select distinct model_a_t.* from model_a_t  limit 10 offset 10"
+    "select distinct * from \"model_a_t\"  limit 10 offset 10"
   );
 
   // where find_by find
   auto subject_where_find = make_sql_adapter(&model_a_t::id)
     .where("model_a_t.id like '%keyword$%'")
-    .find("'123'")
-    .find_by(&model_a_t::age, "'321'")
+    .find("123")
+    .find_by(&model_a_t::age, "321")
     .limit(10);
 
   EXPECT_EQ(
     subject_where_find.to_sql(),
-    "select model_a_t.* from model_a_t where (model_a_t.id = '123') or "
-    "(model_a_t.id like '%keyword$%') and model_a_t.age = '321' limit 10"
+    "select * from \"model_a_t\" where (\"model_a_t\".\"id\" = '123') or "
+    "(model_a_t.id like '%keyword$%') and \"model_a_t\".\"age\" = '321' limit 10"
   );
 }
 
 FIXTURE(adapter) {
   auto subject = make_sql_adapter(&model_a_t::id);
-  subject.find_by(&model_a_t::age, "'321'");
+  subject.find_by(&model_a_t::age, "321");
   subject.find("123");
   subject.find("321");
   subject.find_by("id", "123");
-  subject.find_by(&model_a_t::id, "'321'");
-  subject.find_by(&model_c_t::id, "'420'");
+  subject.find_by(&model_a_t::id, "321");
+  subject.find_by(&model_c_t::id, "420");
   subject.find_by(&model_c_t::name, "alexander");
   subject.find_by(&model_c_t::foreign, "for_321");
   subject.where("id > 0");
@@ -181,6 +181,7 @@ FIXTURE(adapter) {
   subject.order(&model_b_t::id);
   subject.order(&model_c_t::id);
   subject.joins(&model_b_t::foreign, &model_c_t::foreign, &model_d_t::foreign);
+  model_a_t::array_t result = subject;
   //subject.write(std::cout);
 
   auto related_subject = make_sql_adapter(&model_b_t::id);
@@ -562,6 +563,58 @@ FIXTURE(reload) {
     EXPECT_EQ(record->opacity, 0.3);
     record->reload();
     EXPECT_EQ(record->opacity, 0.1);
+    EXPECT_EQ(record->is_dirty(), false);
+  });
+
+  destroy_db();
+}
+
+FIXTURE(is_dirty) {
+  setup_db();
+
+  EXPECT_OK([]() {
+    auto c = hoc::db::super_user_connection();
+    store_t::get()->set_connection(c);
+    pqxx::work w(*c);
+    w.exec("insert into model_z_t (id, age) values (10, 23)");
+    w.exec(
+      "insert into model_a_t (id, opacity, age, huge_num, \"foreign\") values "
+      "('00000000-0000-0000-0000-000000000001', 0.1, 3, 6444, 10);"
+    );
+    w.commit();
+    auto record = model_a_t::find("00000000-0000-0000-0000-000000000001");
+    EXPECT_EQ(record->is_dirty(), false);
+    record->opacity = 0.9;
+    EXPECT_EQ(record->is_dirty(), true);
+    auto dirty_attrs = record->get_dirty_attributes();
+    std::vector<std::string> expected_attrs({ "opacity" });
+    EXPECT_EQ(dirty_attrs.size(), expected_attrs.size());
+    EXPECT_EQ(dirty_attrs[0], expected_attrs[0]);
+    record->reload();
+    EXPECT_EQ(record->is_dirty(), false);
+    record->opacity = 0.9;
+    EXPECT_EQ(record->is_dirty(), true);
+    record->save();
+    EXPECT_TRUE(record->opacity == 0.9);
+    EXPECT_EQ(record->is_dirty(), false);
+    record->opacity = 0.99;
+    EXPECT_TRUE(record->opacity == 0.99);
+    EXPECT_EQ(record->is_dirty(), true);
+    record->changes_applied();
+    EXPECT_EQ(record->is_dirty(), false);
+  });
+
+  destroy_db();
+}
+
+FIXTURE(has_many_association) {
+  setup_db();
+
+  EXPECT_OK([]() {
+    auto c = hoc::db::super_user_connection();
+    store_t::get()->set_connection(c);
+
+
   });
 
   destroy_db();
