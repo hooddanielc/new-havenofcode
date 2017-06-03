@@ -475,6 +475,38 @@ FIXTURE(find_model) {
   destroy_db();
 }
 
+FIXTURE(model_find_by) {
+  setup_db();
+
+  EXPECT_OK([]() {
+    auto c = hoc::db::super_user_connection();
+    pqxx::work w(*c);
+    w.exec("insert into model_z_t (id, age) values (10, 23)");
+    w.exec("insert into model_z_t (id, age) values (20, 21)");
+    w.exec(
+      "insert into model_a_t (id, opacity, age, huge_num, \"foreign\") values "
+      "('00000000-0000-0000-0000-000000000001', 0.1, 3, 6444, 10);"
+    );
+    w.exec(
+      "insert into model_a_t (id, opacity, age, huge_num, \"foreign\") values "
+      "('00000000-0000-0000-0000-000000000002', 0.2, 6, 6444, 10);"
+    );
+    w.exec(
+      "insert into model_a_t (id, opacity, age, huge_num, \"foreign\") values "
+      "('00000000-0000-0000-0000-000000000003', 0.4, 12, 6444, 10);"
+    );
+    w.commit();
+
+    auto adapter = model_z_t::find_by(&model_z_t::age, "10").distinct();
+    EXPECT_EQ(
+      adapter.to_sql(),
+      "select distinct * from \"model_z_t\" where \"model_z_t\".\"age\" = '10'"
+    );
+  });
+
+  destroy_db();
+}
+
 FIXTURE(save_model) {
   setup_db();
 

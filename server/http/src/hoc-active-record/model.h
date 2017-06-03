@@ -768,6 +768,8 @@ private:
 
 };  // table_t<obj_t>
 
+template <typename obj_t, typename val_t> class sql_adapter_t;
+
 template <typename obj_t>
 class model_t {
 public:
@@ -780,6 +782,15 @@ public:
    */
   auto get_primary_key() const {
     return static_cast<const obj_t*>(this)->id;
+  }
+
+  /*
+   * get_primary_mpt()
+   *
+   * return member to pointer for primary key
+   */
+  static auto get_primary_mpt() {
+    return &obj_t::id;
   }
 
   template <typename val_t>
@@ -937,6 +948,28 @@ public:
     auto result = factory_t<obj_t, primary_t>::get()->require(static_cast<primary_t>(val));
     result->reload(w);
     return result;
+  }
+
+  /*
+   * find_by(key, val)
+   *
+   * returns sql adapter that can return rows of data
+   */
+  template <typename key_val_t, typename val_t>
+  static auto find_by(
+    const key_val_t &key,
+    const val_t &val
+  ) {
+    auto adapter = make_sql_adapter(get_primary_mpt());
+    return adapter.find_by(key, val);
+  }
+
+  /*
+   * where(string)
+   */
+  static auto where(const std::string &str) {
+    auto adapter = make_sql_adapter(get_primary_mpt());
+    return adapter.where(str);
   }
 
 private:
