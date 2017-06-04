@@ -251,8 +251,22 @@ public:
    * array of records
    */
   operator array_t () {
-    // todo
+    auto result = rows();
+    return result;
+  }
+
+  array_t rows() {
     array_t result;
+    auto c = store_t::get()->get_connection();
+    auto query = to_sql();
+    pqxx::work w(*c);
+    auto raw = w.exec(query);
+    w.commit();
+    auto factory = factory_t<obj_t, val_t>::get();
+    for (const auto &tuple: raw) {
+      result.push_back(factory->require(tuple));
+    }
+
     return result;
   }
 

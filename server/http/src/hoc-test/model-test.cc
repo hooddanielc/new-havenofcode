@@ -181,7 +181,6 @@ FIXTURE(adapter) {
   subject.order(&model_b_t::id);
   subject.order(&model_c_t::id);
   subject.joins(&model_b_t::foreign, &model_c_t::foreign, &model_d_t::foreign);
-  model_a_t::array_t result = subject;
   //subject.write(std::cout);
 
   auto related_subject = make_sql_adapter(&model_b_t::id);
@@ -339,7 +338,6 @@ FIXTURE(pqxx_adapter_t) {
   model_b_t::table.write(&instance_b, ss2);
 }
 
-
 const char *create_tables = R"(
 create table model_z_t (
   id      serial primary key,
@@ -480,6 +478,7 @@ FIXTURE(model_find_by) {
 
   EXPECT_OK([]() {
     auto c = hoc::db::super_user_connection();
+    store_t::get()->set_connection(c);
     pqxx::work w(*c);
     w.exec("insert into model_z_t (id, age) values (10, 23)");
     w.exec("insert into model_z_t (id, age) values (20, 21)");
@@ -497,11 +496,16 @@ FIXTURE(model_find_by) {
     );
     w.commit();
 
-    auto adapter = model_z_t::find_by(&model_z_t::age, "10").distinct();
+    auto adapter = model_z_t::find_by(&model_z_t::age, "23").distinct();
     EXPECT_EQ(
       adapter.to_sql(),
-      "select distinct * from \"model_z_t\" where \"model_z_t\".\"age\" = '10'"
+      "select distinct * from \"model_z_t\" where \"model_z_t\".\"age\" = '23'"
     );
+
+    auto rows = adapter.rows();
+    EXPECT_EQ(rows.size(), size_t(1));
+    EXPECT_TRUE(rows[0]->id == 10);
+    EXPECT_TRUE(rows[0]->age == 23);
   });
 
   destroy_db();
