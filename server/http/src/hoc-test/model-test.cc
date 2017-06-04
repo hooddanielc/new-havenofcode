@@ -1,6 +1,7 @@
 #include <hoc-test/test-helper.h>
 #include <hoc-active-record/active-record.h>
 #include <hoc/db/connection.h>
+#include <experimental/optional>
 
 using namespace hoc;
 
@@ -11,7 +12,7 @@ public:
 
   primary_key_t<int> id;
 
-  int age;
+  std::experimental::optional<int> age;
 
   static const table_t<model_z_t> table;
 
@@ -49,7 +50,7 @@ public:
 
   primary_key_t<std::string> id;
 
-  foreign_key_t<model_a_t, std::string> foreign;
+  foreign_key_t<model_a_t, std::experimental::optional<std::string>> foreign;
 
   std::string name;
 
@@ -128,7 +129,7 @@ FIXTURE(adapter_to_sql) {
   );
 
   // find_by
-  auto subject_find_by = make_sql_adapter(&model_a_t::id).find_by(&model_a_t::age, "1");
+  auto subject_find_by = make_sql_adapter(&model_a_t::id).find_by(&model_a_t::age, 1);
   EXPECT_EQ(
     subject_find_by.to_sql(),
     "select * from \"model_a_t\" where \"model_a_t\".\"age\" = '1'"
@@ -152,7 +153,7 @@ FIXTURE(adapter_to_sql) {
   auto subject_where_find = make_sql_adapter(&model_a_t::id)
     .where("model_a_t.id like '%keyword$%'")
     .find("123")
-    .find_by(&model_a_t::age, "321")
+    .find_by(&model_a_t::age, 321)
     .limit(10);
 
   EXPECT_EQ(
@@ -164,7 +165,7 @@ FIXTURE(adapter_to_sql) {
 
 FIXTURE(adapter) {
   auto subject = make_sql_adapter(&model_a_t::id);
-  subject.find_by(&model_a_t::age, "321");
+  subject.find_by(&model_a_t::age, 321);
   subject.find("123");
   subject.find("321");
   subject.find_by("id", "123");
@@ -281,9 +282,10 @@ FIXTURE(model_cols) {
 }
 
 FIXTURE(table_converts_member_to_pointer_to_string) {
-  EXPECT_TRUE(model_b_t::table.get_col_name(&model_b_t::foreign) == "foreign");
   EXPECT_TRUE(model_b_t::table.get_col_name(&model_b_t::name) == "name");
   EXPECT_TRUE(model_b_t::table.get_col_name(&model_b_t::id) == "id");
+  EXPECT_TRUE(model_b_t::table.get_col_name(&model_b_t::foreign) == "foreign");
+  EXPECT_TRUE(model_a_t::table.get_col_name(&model_a_t::foreign) == "foreign");
 }
 
 FIXTURE(create_models_and_assign) {
@@ -339,12 +341,25 @@ FIXTURE(pqxx_adapter_t) {
 }
 
 const char *create_tables = R"(
-create table model_z_t (
+create table if not exists circular_b (
+  id          uuid primary key default uuid_generate_v4() not null,
+  crush       uuid
+);
+
+create table if not exists circular_a (
+  id          uuid primary key default uuid_generate_v4() not null,
+  crush       uuid
+);
+
+alter table circular_b add constraint a_fk foreign key (crush) references circular_a (id);
+alter table circular_a add constraint b_fk foreign key (crush) references circular_b (id);
+
+create table if not exists model_z_t (
   id      serial primary key,
   age     int default 1 not null
 );
 
-create table model_a_t (
+create table if not exists model_a_t (
   id          uuid primary key default uuid_generate_v4() not null,
   opacity     numeric (1, 1) default 1.0 not null,
   age         int default 1 not null,
@@ -358,10 +373,14 @@ insert into model_a_t (opacity, age, huge_num, "foreign") values (0.1, 3, 6444, 
 )";
 
 const char *drop_tables = R"(
+alter table circular_a drop constraint if exists b_fk;
+alter table circular_b drop constraint if exists a_fk;
+drop table if exists circular_a;
+drop table if exists circular_b;
 delete from model_a_t where id is not null;
 delete from model_z_t where id is not null;
-drop table model_a_t;
-drop table model_z_t;
+drop table if exists model_a_t;
+drop table if exists model_z_t;
 )";
 
 void setup_db() {
@@ -496,7 +515,7 @@ FIXTURE(model_find_by) {
     );
     w.commit();
 
-    auto adapter = model_z_t::find_by(&model_z_t::age, "23").distinct();
+    auto adapter = model_z_t::find_by(&model_z_t::age, 23).distinct();
     EXPECT_EQ(
       adapter.to_sql(),
       "select distinct * from \"model_z_t\" where \"model_z_t\".\"age\" = '23'"
@@ -532,8 +551,8 @@ FIXTURE(save_model) {
 
     EXPECT_TRUE(z->age == 23);
     EXPECT_TRUE(a->opacity == 0.1);
-    z->set(&model_z_t::age, 50);
-    a->set(&model_a_t::opacity, 0.2);
+    z->age = 50;
+    a->opacity = 0.2;
     z->save();
     a->save();
     EXPECT_TRUE(z->age == 50);
@@ -647,10 +666,11 @@ FIXTURE(has_many_association) {
   setup_db();
 
   EXPECT_OK([]() {
+    // todo - needs managed ptr to deal with circular references
+    // factory require(pqxx::tuple) needs to also include foreign key 
+    // relationship
     auto c = hoc::db::super_user_connection();
     store_t::get()->set_connection(c);
-
-
   });
 
   destroy_db();

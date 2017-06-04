@@ -5,6 +5,7 @@
 #include <memory>
 #include <mutex>
 #include <ostream>
+#include <experimental/optional>
 
 #include <hoc-active-record/valuable.h>
 #include <hoc/db/connection.h>
@@ -329,19 +330,65 @@ public:
       : any_col_of_t<obj_t>(name_), p2m(p2m_) {}
 
   virtual void write(const obj_t *obj, std::ostream &strm) const override {
-    strm << (obj->*p2m);
+    write_stream(obj->*p2m, strm);
+  }
+
+  template <typename regular_val_t>
+  void write_stream(const regular_val_t &val, std::ostream &strm) const {
+    strm << val;
+  }
+
+  template <typename optional_val_t>
+  void write_stream(const std::experimental::optional<optional_val_t> &val, std::ostream &strm) const {
+    if (val) {
+      strm << val.value();
+    } else {
+      strm << "null";
+    }
   }
 
   virtual void write(const obj_t *obj, json &json) const override {
-    json[any_col_t::name] = (obj->*p2m);
+    write_json(obj->*p2m, json);
+  }
+
+  template <typename regular_val_t>
+  void write_json(const regular_val_t &val, json &json) const {
+    json[any_col_t::name] = val;
+  }
+
+  template <typename optional_val_t>
+  void write_json(const std::experimental::optional<optional_val_t> &val, json &json) const {
+    if (val) {
+      json[any_col_t::name] = val.value();
+    }
   }
 
   virtual void read(obj_t *obj, const pqxx::result::field &field) const override {
-    (obj->*p2m) = field.as<val_t>();
+    read_pqxx_field(obj, obj->*p2m, field);
+  }
+
+  template <typename regular_val_t>
+  void read_pqxx_field(obj_t *obj, const regular_val_t &, const pqxx::result::field &field) const {
+    (obj->*p2m) = field.as<regular_val_t>();
+  }
+
+  template <typename optional_val_t>
+  void read_pqxx_field(obj_t *obj, const std::experimental::optional<optional_val_t> &, const pqxx::result::field &field) const {
+    (obj->*p2m) = field.as<optional_val_t>();
   }
 
   virtual void read(obj_t *obj, const json &json) const override {
-    (obj->*p2m) = json.get<val_t>();
+    read_json(obj, obj->*p2m, json);
+  }
+
+  template <typename regular_val_t>
+  void read_json(obj_t *obj, const regular_val_t &, const json &json) const {
+    (obj->*p2m) = json.get<regular_val_t>();
+  }
+
+  template <typename optional_val_t>
+  void read_json(obj_t *obj, const std::experimental::optional<optional_val_t> &, const json &json) const {
+    (obj->*p2m) = json.get<optional_val_t>();
   }
 
   virtual bool is_equal(obj_t *obj_a, obj_t *obj_b) const override {
@@ -381,8 +428,16 @@ public:
   }
 
   virtual void write(const obj_t *obj, json &json) const override {
-    json[any_col_t::name] = (obj->*p2m).get();
+    write_json((obj->*p2m).get(), json);
   }
+
+  template <typename regular_val_t>
+  void write_json(const regular_val_t &val, json &json) const {
+    json[any_col_t::name] = val;
+  }
+
+  template <typename optional_val_t> // not allowed to make primary key optional
+  void write_json(const std::experimental::optional<optional_val_t> &val, json &json) const = delete;
 
   virtual void read(obj_t *obj, const pqxx::result::field &field) const override {
     (obj->*p2m) = field.as<val_t>();
@@ -413,12 +468,12 @@ public:
 template <typename obj_t, typename val_t, typename target_obj_t, typename target_val_t>
 class has_many_col_t;
 
-template <typename obj_t, typename val_t, typename target_obj_t>
+template <typename obj_t, typename val_t, typename target_obj_t, typename target_val_t = val_t>
 class foreign_col_t final: public any_col_of_t<obj_t> {
 public:
 
   using p2m_t = foreign_key_t<target_obj_t, val_t> (obj_t::*);
-  using p2m_target_t = primary_key_t<val_t> (target_obj_t::*);
+  using p2m_target_t = primary_key_t<target_val_t> (target_obj_t::*);
 
   explicit foreign_col_t(p2m_t p2m_, p2m_target_t p2m_target_)
       : p2m(p2m_), p2m_target(p2m_target_) {}
@@ -427,21 +482,67 @@ public:
       : any_col_of_t<obj_t>(name_), p2m(p2m_), p2m_target(p2m_target_) {}
 
   virtual void write(const obj_t *obj, std::ostream &strm) const override {
-    strm << (obj->*p2m);
+    write_stream((obj->*p2m).get(), strm);
+  }
+
+  template <typename regular_val_t>
+  void write_stream(const regular_val_t &val, std::ostream &strm) const {
+    strm << val;
+  }
+
+  template <typename optional_val_t>
+  void write_stream(const std::experimental::optional<optional_val_t> &val, std::ostream &strm) const {
+    if (val) {
+      strm << val.value();
+    } else {
+      strm << "null";
+    }
   }
 
   virtual void write(const obj_t *obj, json &json) const override {
-    json[any_col_t::name] = (obj->*p2m).get();
+    write_json((obj->*p2m).get(), json);
+  }
+
+  template <typename regular_val_t>
+  void write_json(const regular_val_t &val, json &json) const {
+    json[any_col_t::name] = val;
+  }
+
+  template <typename optional_val_t>
+  void write_json(const std::experimental::optional<optional_val_t> &val, json &json) const {
+    if (val) {
+      json[any_col_t::name] = val.value();
+    }
   }
 
   virtual void read(obj_t *obj, const pqxx::result::field &field) const override {
-    (obj->*p2m) = field.as<val_t>();
+    read_pqxx_field(obj, (obj->*p2m).get(), field);
     add_has_many_record(obj->get_primary_key(), obj);
   }
 
+  template <typename regular_val_t>
+  void read_pqxx_field(obj_t *obj, const regular_val_t &, const pqxx::result::field &field) const {
+    (obj->*p2m) = field.as<regular_val_t>();
+  }
+
+  template <typename optional_val_t>
+  void read_pqxx_field(obj_t *obj, const std::experimental::optional<optional_val_t> &, const pqxx::result::field &field) const {
+    (obj->*p2m) = field.as<optional_val_t>();
+  }
+
   virtual void read(obj_t *obj, const json &json) const override {
-    (obj->*p2m) = json.get<val_t>();
+    read_json(obj, (obj->*p2m).get(), json);
     add_has_many_record(obj->get_primary_key(), obj);
+  }
+
+  template <typename regular_val_t>
+  void read_json(obj_t *obj, const regular_val_t &, const json &json) const {
+    (obj->*p2m) = json.get<regular_val_t>();
+  }
+
+  template <typename optional_val_t>
+  void read_json(obj_t *obj, const std::experimental::optional<optional_val_t> &, const json &json) const {
+    (obj->*p2m) = json.get<optional_val_t>();
   }
 
   virtual bool is_equal(obj_t *obj_a, obj_t *obj_b) const override {
@@ -568,6 +669,15 @@ inline std::shared_ptr<foreign_col_t<obj_t, val_t, target_obj_t>> make_col(
   return std::make_shared<foreign_col_t<obj_t, val_t, target_obj_t>>(name, p2m, p2m_target);
 }
 
+template <typename obj_t, typename val_t, typename target_obj_t>
+inline std::shared_ptr<foreign_col_t<obj_t, std::experimental::optional<val_t>, target_obj_t, val_t>> make_col(
+  const std::string &name,
+  foreign_key_t<target_obj_t, std::experimental::optional<val_t>> (obj_t::*p2m),
+  primary_key_t<val_t> (target_obj_t::*p2m_target)
+) {
+  return std::make_shared<foreign_col_t<obj_t, std::experimental::optional<val_t>, target_obj_t, val_t>>(name, p2m, p2m_target);
+}
+
 template <typename obj_t, typename val_t, typename target_obj_t, typename target_val_t>
 inline std::shared_ptr<has_many_col_t<obj_t, val_t, target_obj_t, target_val_t>> make_col(
   const std::string &name,
@@ -640,7 +750,7 @@ public:
   }
 
   /*
-   * get_col_name(&model::primary_key_member)
+   * get_col_name(&model::member)
    *
    * Look up the name of a col_t using a member
    * to pointer reference.
@@ -685,6 +795,25 @@ public:
   template <typename target_val_t, typename target_obj_t>
   std::string get_col_name(foreign_key_t<target_obj_t, target_val_t> (obj_t::*p2m)) const {
     using for_t = const foreign_col_t<obj_t, target_val_t, target_obj_t>*;
+    for (const auto &col: cols) {
+      if (for_t advanced_col = dynamic_cast<for_t>(&*col)) {
+        if (advanced_col->p2m == p2m) {
+          return advanced_col->name;
+        }
+      }
+    }
+    throw std::runtime_error("column does not exist, did you forget to make_col?");
+  }
+
+  /*
+   * get_col_name(&model::foreign_key_member) optional member
+   *
+   * Look up the name of a foreign_col_t using a member
+   * to pointer reference.
+   */
+  template <typename target_val_t, typename target_obj_t>
+  std::string get_col_name(foreign_key_t<target_obj_t, std::experimental::optional<target_val_t>> (obj_t::*p2m)) const {
+    using for_t = const foreign_col_t<obj_t, std::experimental::optional<target_val_t>, target_obj_t, target_val_t>*;
     for (const auto &col: cols) {
       if (for_t advanced_col = dynamic_cast<for_t>(&*col)) {
         if (advanced_col->p2m == p2m) {
@@ -796,6 +925,13 @@ public:
   template <typename val_t>
   void set_primary_key(const val_t &val) {
     static_cast<obj_t*>(this)->id = val;
+  }
+
+  template <typename val_t>
+  void set_primary_key(const std::experimental::optional<val_t> &val) {
+    if (val) {
+      static_cast<obj_t*>(this)->id = val.value();
+    }
   }
 
   /*
