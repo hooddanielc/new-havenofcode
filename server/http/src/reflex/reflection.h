@@ -90,6 +90,11 @@ struct reflex_pack {
       return std::make_unique<member_t<obj_t, val_t, convertables_t...>>(name, ptr);
     }   // make_attr<val_t>
 
+    template <typename val_t, typename linked_obj_t, typename linked_val_t>
+    static std::unique_ptr<attr_t> make_linked_attr(const std::string &name, val_t (obj_t::*ptr), linked_val_t (linked_obj_t::*linked_ptr)) {
+      return std::make_unique<linked_member_t<obj_t, val_t, linked_obj_t, linked_val_t, convertables_t...>>(name, ptr, linked_ptr);
+    }   // make_attr<val_t>
+
   };  // with<obj_t>
 
 };  // reflex_pack<convertables_t...>

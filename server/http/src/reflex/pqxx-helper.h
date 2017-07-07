@@ -103,7 +103,7 @@ struct member_helper_t<obj_t, val_t, pqxx::tuple> {
     }
   }
 
-};  // member_helper_t<val_t, hoc::json>
+};  // member_helper_t<obj_t, val_t, pqxx::tuple>
 
 template <typename obj_t, typename val_t>
 int member_helper_t<obj_t, val_t, pqxx::tuple>::column_number = -1;

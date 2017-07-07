@@ -70,8 +70,8 @@ void destroy_db() {
 
 FIXTURE(reflection_t) {
 
-  std::cout << fixture_reflection_t::reflection.get_members().size() << std::endl;
-  std::cout << fixture_reflection_t::reflection.get_members()[0]->name << std::endl;
+  EXPECT_EQ(fixture_reflection_t::reflection.get_members().size(), size_t(3));
+  EXPECT_EQ(fixture_reflection_t::reflection.get_members()[0]->name, "a");
 
   reflection_t<fixture_reflection_t, hoc::json, pqxx::tuple> reflex({
     mirror::with<fixture_reflection_t>::make_attr("a", &fixture_reflection_t::a),
