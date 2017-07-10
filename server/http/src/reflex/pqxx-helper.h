@@ -66,11 +66,11 @@ struct member_helper_t<obj_t, val_t, pqxx::tuple> {
 
   static constexpr bool is_specialized { true };
 
-  static void write(const std::string &, const val_t &, const pqxx::tuple &) {
+  static bool write(const std::string &, const val_t &, const pqxx::tuple &) {
     throw std::runtime_error("can not write to pqxx::tuple");
   }
 
-  static void read(const std::string &name, val_t &val, const pqxx::tuple &from) {
+  static bool read(const std::string &name, val_t &val, const pqxx::tuple &from) {
     using def_t = pqxx_table_t<obj_t>;
     read_column_number(name);
 
@@ -78,10 +78,13 @@ struct member_helper_t<obj_t, val_t, pqxx::tuple> {
       if (int(from[i].table()) == def_t::get_postgres_oid() && int(from[i].table_column()) == column_number) {
         if (!from[i].is_null()) {
           val = from[i].as<val_t>();
+          return true;
         }
         break;
       }
     }
+
+    return false;
   }
 
   static int column_number;

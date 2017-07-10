@@ -10,7 +10,7 @@ struct member_helper_t {
 
   static constexpr bool is_specialized { false };
 
-  static void read(const std::string &name, val_t &, const convertable_t &) {
+  static bool read(const std::string &name, val_t &, const convertable_t &) {
     static_assert(
       member_helper_t<obj_t, val_t, convertable_t>::is_specialized,
       "member_helper_t<val_t, convertable_t>::read needs at least one specialization"
@@ -19,7 +19,7 @@ struct member_helper_t {
     throw_unimplemented(name);
   }
 
-  static void write(const std::string &name, const val_t &, convertable_t &) {
+  static bool write(const std::string &name, const val_t &, convertable_t &) {
     static_assert(
       member_helper_t<obj_t, val_t, convertable_t>::is_specialized,
       "member_helper_t<val_t, convertable_t>::write needs at least one specialization"

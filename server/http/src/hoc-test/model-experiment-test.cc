@@ -21,7 +21,16 @@ public:
 
   container_t(val_t &&val_): is_set(true), val(std::move(val_)) {}
 
-  bool has_value() {
+  container_t &operator=(const val_t &val_) {
+    swap(val_);
+    return *this;
+  }
+
+  operator bool() const {
+    return has_value();
+  }
+
+  bool has_value() const {
     return is_set;
   }
 
@@ -57,9 +66,19 @@ public:
   }
 
   void swap(val_t &&val_) {
-    reset();
-    val = std::move(val_);
-    is_set = true;
+    if (&val_ != &val) {
+      reset();
+      val = std::move(val_);
+      is_set = true;
+    }
+  }
+
+  void swap(const val_t &val_) {
+    if (&val_ != &val) {
+      reset();
+      val = val_t(val_);
+      is_set = true;
+    }
   }
 
 private:
@@ -118,12 +137,23 @@ struct member_helper_t<obj_t, container_t<val_t>, hoc::json> {
 
   static constexpr bool is_specialized { true };
 
-  static void read(const std::string &name, container_t<val_t> &val, const hoc::json &from) {
-    member_helper_t<obj_t, val_t, hoc::json>::read(name, val.value(), from);
+  static bool read(const std::string &name, container_t<val_t> &val, const hoc::json &from) {
+    val_t new_val;
+    if (member_helper_t<obj_t, val_t, hoc::json>::read(name, new_val, from)) {
+      val.swap(new_val);
+      return true;
+    }
+
+    return false;
   }
 
-  static void write(const std::string &name, const container_t<val_t> &val, hoc::json &from) {
-    member_helper_t<obj_t, val_t, hoc::json>::write(name, val.value(), from);
+  static bool write(const std::string &name, const container_t<val_t> &val, hoc::json &from) {
+    if (val) {
+      member_helper_t<obj_t, val_t, hoc::json>::write(name, val.value(), from);
+      return true;
+    }
+
+    return false;
   }
 
 };  // member_helper_t<obj_t, val_t, hoc::json>
@@ -145,12 +175,23 @@ struct member_helper_t<obj_t, container_t<val_t>, pqxx::tuple> {
 
   static constexpr bool is_specialized { true };
 
-  static void read(const std::string &name, container_t<val_t> &val, const pqxx::tuple &from) {
-    member_helper_t<obj_t, val_t, pqxx::tuple>::read(name, val.value(), from);
+  static bool read(const std::string &name, container_t<val_t> &val, const pqxx::tuple &from) {
+    val_t new_val;
+    if (member_helper_t<obj_t, val_t, pqxx::tuple>::read(name, new_val, from)) {
+      val.swap(new_val);
+      return true;
+    }
+
+    return false;
   }
 
-  static void write(const std::string &name, const container_t<val_t> &val, pqxx::tuple &from) {
-    member_helper_t<obj_t, val_t, pqxx::tuple>::write(name, val.value(), from);
+  static bool write(const std::string &name, const container_t<val_t> &val, pqxx::tuple &from) {
+    if (val) {
+      member_helper_t<obj_t, val_t, pqxx::tuple>::write(name, val.value(), from);
+      return true;
+    }
+
+    return false;
   }
 
 };  // member_helper_t<obj_t, val_t, pqxx::tuple>
@@ -244,6 +285,8 @@ FIXTURE(some_container) {
   container_initialized.value() = 3;
   EXPECT_EQ(container_initialized.value(), 3);
   container_initialized.reset();
+
+  container_initialized = 43;
 }
 
 FIXTURE(with_primary_key) {
@@ -279,6 +322,12 @@ FIXTURE(with_primary_key) {
     EXPECT_EQ(json_obj["a"].get<int>(), 1);
     EXPECT_EQ(json_obj["b"].get<int>(), 2);
     EXPECT_EQ(json_obj["c"].get<std::string>(), "string");
+
+    model.buddy.reset();
+    EXPECT_FALSE(model.buddy);
+    hoc::json json_obj_null_buddy;
+    model_b_t::reflection.write(&model, json_obj_null_buddy);
+    EXPECT_TRUE(json_obj_null_buddy["buddy"].is_null());
   });
 }
 
