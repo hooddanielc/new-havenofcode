@@ -11,5 +11,3 @@ An http server running nginx with C++ http module.
 # launches docker dev environment
 ./run.sh
 ```
-
-Point your browser to `(docker-machine ip):1337`

@@ -150,10 +150,10 @@ namespace hoc {
   dj::json_t::array_t to_json(const pqxx::result &result) {
     dj::json_t::array_t json;
 
-    for (pqxx::tuple::size_type y = 0; y < result.size(); ++y) {
+    for (pqxx::row::size_type y = 0; y < result.size(); ++y) {
       auto obj = dj::json_t::empty_object;
 
-      for (pqxx::tuple::size_type x = 0; x < result.columns(); ++x) {
+      for (pqxx::row::size_type x = 0; x < result.columns(); ++x) {
         string name(result.column_name(x));
         camelify(name);
 

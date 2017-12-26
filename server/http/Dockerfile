@@ -9,51 +9,10 @@ RUN sudo pacman --noconfirm -S gsasl
 RUN sudo pacman --noconfirm -S gnutls
 RUN sudo pacman --noconfirm -S gtk3
 
-# download nginx
-RUN cd ~ && wget http://nginx.org/download/nginx-1.13.3.tar.gz
-RUN cd ~ && tar -xvf nginx-1.13.3.tar.gz
-RUN rm ~/nginx-1.13.3.tar.gz
-RUN mv ~/nginx-1.13.3 ~/nginx
-
-# download libvmime
-RUN sudo mkdir /opt/libvmime && sudo chown -R developer /opt/libvmime
-RUN git clone https://aur.archlinux.org/libvmime.git /opt/libvmime
-
-# download aws-sdk-cpp
-RUN sudo mkdir /opt/aws-sdk-cpp && sudo chown developer /opt/aws-sdk-cpp
-RUN git clone --branch 1.1.13 https://github.com/aws/aws-sdk-cpp.git /opt/aws-sdk-cpp
-
-# download nlohmann json
-RUN sudo mkdir /opt/json && sudo chown developer /opt/json
-RUN git clone --branch v2.1.1 https://github.com/nlohmann/json.git /opt/json
-
-# build nlohmann json
-RUN mkdir /opt/json/build && cd /opt/json/build && cmake ..
-RUN cd /opt/json/build && make -j$(grep -c ^processor /proc/cpuinfo) && sudo make install
-
-# build vmime
-RUN cd /opt/libvmime && makepkg --noconfirm -s
-RUN sudo pacman --noconfirm -U /opt/libvmime/*.pkg.tar.xz
-
-# build aws c++ sdk
-RUN mkdir /opt/aws-sdk-cpp/build && cd /opt/aws-sdk-cpp/build && cmake \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DBUILD_ONLY="s3" \
-  -DENABLE_TESTING="OFF" ..
-
-RUN cd /opt/aws-sdk-cpp/build && make -j$(grep -c ^processor /proc/cpuinfo)
-RUN cd /opt/aws-sdk-cpp/build && sudo make install
-
-# build nginx module
-ADD ./ngx-loadable-cpp-module /home/developer/ngx-loadable-cpp-module
-
-RUN cd ~/nginx && ./configure \
-  --with-http_ssl_module \
-  --with-file-aio \
-  --with-threads \
-  --add-module=/home/developer/ngx-loadable-cpp-module
-
-RUN cd ~/nginx && make -j$(grep -c ^processor /proc/cpuinfo) && sudo make install
+ADD deps/aws-sdk-cpp/pkg/aws-sdk-cpp /
+ADD deps/libvmime/pkg/libvmime /
+ADD deps/nginx-loadable-cpp-module/pkg/nginx-loadable-cpp-module /
+ADD deps/nlohmann-json/pkg/nlohmann-json /
 
 # setup
 RUN echo 'cd $HOME' >> $HOME/.zshrc
@@ -68,6 +27,7 @@ ADD ./scripts /home/developer/scripts
 ADD ./src /home/developer/src
 
 # build nginx module
+RUN chmod +x /opt/ib/ib
 RUN cd $HOME/src && ib main.so
 
 # environment env

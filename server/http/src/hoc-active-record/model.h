@@ -131,7 +131,7 @@ public:
     return result;
   }
 
-  std::shared_ptr<obj_t> require(const pqxx::tuple &res) {
+  std::shared_ptr<obj_t> require(const pqxx::row &res) {
     read_table();
     std::shared_ptr<obj_t> result;
 
@@ -395,6 +395,10 @@ public:
     return (obj_a->*p2m) == (obj_b->*p2m);
   }
 
+  virtual void read(obj_t *obj, const json &json) const override {
+    obj->*p2m = json.get<val_t>();
+  }
+
   virtual bool is_primary_key() const override {
     return false;
   }
@@ -449,6 +453,10 @@ public:
 
   virtual bool is_equal(obj_t *obj_a, obj_t *obj_b) const override {
     return (obj_a->*p2m).get() == (obj_b->*p2m).get();
+  }
+
+  virtual void read(obj_t *obj, const json &json) const override {
+    obj->*p2m = json.get<val_t>();
   }
 
   virtual bool is_primary_key() const override {
