@@ -1,7 +1,8 @@
 FROM dhoodlum/base-environment
 
 # install deps
-RUN sudo pacman --noconfirm -S postgresql libpqxx
+RUN sudo pacman --noconfirm -Syyu
+RUN sudo pacman --noconfirm -S postgresql
 RUN sudo pacman --noconfirm -S curl
 RUN sudo pacman --noconfirm -S zlib
 RUN sudo pacman --noconfirm -S libutil-linux
@@ -13,6 +14,7 @@ ADD deps/aws-sdk-cpp/pkg/aws-sdk-cpp /
 ADD deps/libvmime/pkg/libvmime /
 ADD deps/nginx-loadable-cpp-module/pkg/nginx-loadable-cpp-module /
 ADD deps/nlohmann-json/pkg/nlohmann-json /
+ADD deps/libpqxx/pkg/libpqxx /
 
 # setup
 RUN echo 'cd $HOME' >> $HOME/.zshrc

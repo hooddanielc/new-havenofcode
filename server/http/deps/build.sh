@@ -5,6 +5,7 @@ DEPS=(
   libvmime
   nlohmann-json
   nginx-loadable-cpp-module
+  libpqxx
 )
 
 echo $DIR
