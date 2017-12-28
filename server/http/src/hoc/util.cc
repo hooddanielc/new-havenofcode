@@ -194,7 +194,6 @@ namespace hoc {
   }
 
   std::string get_s3_url(const dj::json_t &file) {
-    std::cout << file << std::endl;
     Aws::Client::ClientConfiguration config;
     config.region = file["awsRegion"].as<std::string>().c_str();
 
