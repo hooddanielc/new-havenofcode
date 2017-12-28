@@ -6,6 +6,7 @@ server/http/out/release
 server/http/deps/*/pkg
 server/db/db-tools/node_modules
 server/db/db-tools/dist
+server/db/log/*.log
 server/tmp/fake-s3
 server/.zsh_history
 *.DS_Store

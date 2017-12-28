@@ -61,8 +61,8 @@ module.exports = {
         using (true)
         with check (true);
       create policy member_update_registration on registration to members
-        using (email = current_user AND verified = 'FALSE')
-        with check (current_user = email AND verified = 'FALSE');
+        using (email = current_user)
+        with check (current_user = email);
       create policy anonymous_registration on registration to public
         using (verified = 'FALSE')
         with check (verified = 'FALSE');
@@ -188,7 +188,8 @@ module.exports = {
       create policy file_members on file to members
         using (deleted = 'FALSE')
         with check (
-          created_by = current_account_id()
+          created_by = current_account_id() AND
+          deleted = 'FALSE'
         );
       create policy file_public on file to public
         using (deleted = 'FALSE')
