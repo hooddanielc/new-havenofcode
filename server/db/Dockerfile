@@ -33,6 +33,8 @@ ADD ./db-tools/gulpfile.js /home/developer/db-tools/gulpfile.js
 RUN cd $HOME/db-tools && ./node_modules/.bin/gulp
 
 ADD ./db-tools/migrations /home/developer/db-tools/migrations
+ADD ./config/postgresql.conf /home/developer/data/appended-postgresql.conf
+RUN sudo cat /home/developer/data/appended-postgresql.conf >> /home/developer/data/postgresql.conf
 
 RUN  pg_ctl -w start -D $HOME/data && \
   cd $HOME/db-tools && ./node_modules/.bin/sequelize db:migrate --env development && \

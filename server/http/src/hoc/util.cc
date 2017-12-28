@@ -194,6 +194,7 @@ namespace hoc {
   }
 
   std::string get_s3_url(const dj::json_t &file) {
+    std::cout << file << std::endl;
     Aws::Client::ClientConfiguration config;
     config.region = file["awsRegion"].as<std::string>().c_str();
 
@@ -202,7 +203,7 @@ namespace hoc {
       env_t::get().aws_secret.get().c_str()
     ), config);
 
-    const char *key = file["awsKey"].as<std::string>().substr(1).c_str();
+    const char *key = file["awsKey"].as<std::string>().c_str();
     const char *bucket = file["awsBucket"].as<std::string>().c_str();
 
     return client.GeneratePresignedUrl(

@@ -62,7 +62,7 @@ module.exports = {
         with check (true);
       create policy member_update_registration on registration to members
         using (email = current_user AND verified = 'FALSE')
-        with check (current_user = email AND verified = 'TRUE');
+        with check (current_user = email AND verified = 'FALSE');
       create policy anonymous_registration on registration to public
         using (verified = 'FALSE')
         with check (verified = 'FALSE');

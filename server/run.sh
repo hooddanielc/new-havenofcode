@@ -1,7 +1,7 @@
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # persist db and create volume labeled dbstore
-docker create -v /home/developer/data --name dbstore dhoodlum/havenofcode-db /bin/true
+docker create -v /home/developer/data -v $DIR/db/log:/home/developer/data/log --name dbstore dhoodlum/havenofcode-db /bin/true
 docker run -tid --rm --volumes-from dbstore -p 5432:5432 --name hoc-db dhoodlum/havenofcode-db
 
 touch $DIR/.zsh_history
